@@ -1,96 +1,95 @@
-from marshmallow import fields
 
 
-class DMField(fields.Field):
+class DMField(object):
 
     def __init__(self, attribute=None, **kwargs):
         super(DMField, self).__init__(**kwargs)
 
 
-class RawField(fields.Raw, DMField):
+class RawField(DMField):
     pass
 
 
-class NestedField(fields.Nested, DMField):
+class NestedField(DMField):
     pass
 
 
-class DictField(fields.Dict, DMField):
+class DictField(DMField):
     pass
 
 
-class ListField(fields.List, DMField):
+class ListField(DMField):
     pass
 
 
-class StringField(fields.String, DMField):
+class StringField(DMField):
     pass
 
 
-class UUIDField(fields.UUID, DMField):
+class UUIDField(DMField):
     pass
 
 
-class NumberField(fields.Number, DMField):
+class NumberField(DMField):
     pass
 
 
-class IntegerField(fields.Integer, DMField):
+class IntegerField(DMField):
     pass
 
 
-class DecimalField(fields.Decimal, DMField):
+class DecimalField(DMField):
     pass
 
 
-class BooleanField(fields.Boolean, DMField):
+class BooleanField(DMField):
     pass
 
 
-class FormattedStringField(fields.FormattedString, DMField):
+class FormattedStringField(DMField):
     pass
 
 
-class FloatField(fields.Float, DMField):
+class FloatField(DMField):
     pass
 
 
-class DateTimeField(fields.DateTime, DMField):
+class DateTimeField(DMField):
     pass
 
 
-class LocalDateTimeField(fields.LocalDateTime, DMField):
+class LocalDateTimeField(DMField):
     pass
 
 
-class TimeField(fields.Time, DMField):
+class TimeField(DMField):
     pass
 
 
-class DateField(fields.Date, DMField):
+class DateField(DMField):
     pass
 
 
-class TimeDeltaField(fields.TimeDelta, DMField):
+class TimeDeltaField(DMField):
     pass
 
 
-class URLField(fields.URL, DMField):
+class URLField(DMField):
     pass
 
 
-class EmailField(fields.Email, DMField):
+class EmailField(DMField):
     pass
 
 
-class MethodField(fields.Method, DMField):
+class MethodField(DMField):
     pass
 
 
-class FunctionField(fields.Function, DMField):
+class FunctionField(DMField):
     pass
 
 
-class ConstantField(fields.Constant, DMField):
+class ConstantField(DMField):
     pass
 

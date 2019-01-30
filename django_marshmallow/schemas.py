@@ -1,7 +1,7 @@
 from django.db import models
-from marshmallow import SchemaOpts as MarshmallowSchemaOpts
-from marshmallow.compat import with_metaclass
-from marshmallow.schema import SchemaMeta , Schema as MarshmallowSchema
+from django_marshmallow import SchemaOpts as MarshmallowSchemaOpts
+from six import with_metaclass
+
 
 from django_marshmallow import fields
 
@@ -46,5 +46,5 @@ class ModelSchemaMeta(SchemaMeta):
         return dict_cls()
 
 
-class ModelSchema(with_metaclass(ModelSchemaMeta, MarshmallowSchema)):
+class ModelSchema(with_metaclass(ModelSchemaMeta)):
     OPTIONS_CLASS = ModelSchemaOpts
