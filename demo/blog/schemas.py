@@ -1,7 +1,9 @@
 from django_marshmallow import schemas
 
-class CitySchema(schemas.ModelSchema):
+from blog.models import Post
+
+class BlogSchema(schemas.ModelSchema):
 
     class Meta:
-        fields = ('country', 'name')
-        model = City
+        fields = ('title', 'is_published')
+        model = Post
