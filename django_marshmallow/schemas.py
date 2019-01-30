@@ -21,7 +21,11 @@ MAPPING = {
 }
 
 
-class ModelSchemaMeta(SchemaMeta):
+class Base(object):
+    def dump(self, instance):
+        return 'dump'
+
+class ModelSchemaMeta(type):
     """Metaclass for ModelSchema."""
 
     @classmethod
@@ -46,5 +50,5 @@ class ModelSchemaMeta(SchemaMeta):
         return dict_cls()
 
 
-class ModelSchema(with_metaclass(ModelSchemaMeta)):
+class ModelSchema(with_metaclass(ModelSchemaMeta, Base)):
     OPTIONS_CLASS = ModelSchemaOpts
