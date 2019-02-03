@@ -2,8 +2,18 @@
 
 class DMField(object):
 
-    def __init__(self, attribute=None, **kwargs):
+    def __init__(self, attribute=None, formatter=None, **kwargs):
+        self.attribute = attribute
+        self.formatter = formatter
         super(DMField, self).__init__(**kwargs)
+
+    def format(self, value):
+        if self.formatter:
+            return self.formatter(value)
+        return value
+
+    def to_python(self, value):
+        return self.format(value)
 
 
 class RawField(DMField):
@@ -19,7 +29,8 @@ class DictField(DMField):
 
 
 class ListField(DMField):
-    pass
+    def to_python(self, value):
+        return list(value)
 
 
 class StringField(DMField):
