@@ -1,3 +1,5 @@
+### Notice: The stable version is not avaiable. Currently, it's rototype and still developing. Feel free to contribute.  
+
 This is a package that making serialization for django model objects and major python data types. It is a wrapper for [marsmallow package](https://marshmallow.readthedocs.io). The main aim is serialize the django model class objects.
 
 Examples:
