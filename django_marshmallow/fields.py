@@ -1,95 +1,95 @@
 
 
-class DMField(object):
+class Field(object):
 
     def __init__(self, attribute=None, **kwargs):
-        super(DMField, self).__init__(**kwargs)
+        super(Field, self).__init__(**kwargs)
 
 
-class RawField(DMField):
+class RawField(Field):
     pass
 
 
-class NestedField(DMField):
+class NestedField(Field):
     pass
 
 
-class DictField(DMField):
+class DictField(Field):
     pass
 
 
-class ListField(DMField):
+class ListField(Field):
     pass
 
 
-class StringField(DMField):
+class StringField(Field):
     pass
 
 
-class UUIDField(DMField):
+class UUIDField(Field):
     pass
 
 
-class NumberField(DMField):
+class NumberField(Field):
     pass
 
 
-class IntegerField(DMField):
+class IntegerField(Field):
     pass
 
 
-class DecimalField(DMField):
+class DecimalField(Field):
     pass
 
 
-class BooleanField(DMField):
+class BooleanField(Field):
     pass
 
 
-class FormattedStringField(DMField):
+class FormattedStringField(Field):
     pass
 
 
-class FloatField(DMField):
+class FloatField(Field):
     pass
 
 
-class DateTimeField(DMField):
+class DateTimeField(Field):
     pass
 
 
-class LocalDateTimeField(DMField):
+class LocalDateTimeField(Field):
     pass
 
 
-class TimeField(DMField):
+class TimeField(Field):
     pass
 
 
-class DateField(DMField):
+class DateField(Field):
     pass
 
 
-class TimeDeltaField(DMField):
+class TimeDeltaField(Field):
     pass
 
 
-class URLField(DMField):
+class URLField(Field):
     pass
 
 
-class EmailField(DMField):
+class EmailField(Field):
     pass
 
 
-class MethodField(DMField):
+class MethodField(Field):
     pass
 
 
-class FunctionField(DMField):
+class FunctionField(Field):
     pass
 
 
-class ConstantField(DMField):
+class ConstantField(Field):
     pass
 

@@ -102,3 +102,4 @@ ENV/
 .idea/
 
 db.sqlite3
+notes.md
