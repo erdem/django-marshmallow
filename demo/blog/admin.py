@@ -28,12 +28,20 @@ class PostOrginalSchema(Schema):
     created_at = fields.DateTime()
 
 
+class CategorySchema(ModelSchema):
+    name = fields.String()
+
+    class Meta:
+        model = Category
+        exclude = ('name',)
+
+
 class PostModelSchema(ModelSchema):
-    created_at = fields.Date()
+    category = fields.Nested(CategorySchema)
 
     class Meta:
         model = Post
-        fields = ('created_at', 'title')
+        fields = ('created_at', 'title', 'category', 'is_published', 'post')
         ordered = True
 
 

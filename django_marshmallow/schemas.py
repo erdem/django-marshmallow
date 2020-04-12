@@ -4,6 +4,7 @@ from itertools import chain
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db import models
+from django.db.models import IPAddressField
 from django.utils.functional import cached_property
 from marshmallow.schema import SchemaMeta, SchemaOpts
 
@@ -17,46 +18,58 @@ class ModelSchemaOpts(SchemaOpts):
 
     def __init__(self, meta, ordered: bool = False):
         super(ModelSchemaOpts, self).__init__(meta, ordered)
-        self.fields = getattr(meta, 'fields', '__all__')
+        self.fields = getattr(meta, 'fields', None)
         self.model = getattr(meta, 'model', None)
         self.level = getattr(meta, 'level', None)
         self.exclude = getattr(meta, 'exclude', ())
 
 
-# class DeclarativeFieldsMetaclass(SchemaMeta):
-#     """Collect Fields declared on the base classes."""
-#
-#     def __new__(mcs, name, bases, attrs):
-#         # Collect fields from current class.
-#         current_fields = []
-#         for key, value in list(attrs.items()):
-#             if isinstance(value, fields.Field):
-#                 current_fields.append((key, value))
-#                 attrs.pop(key)
-#         attrs['_declared_fields'] = OrderedDict(current_fields)
-#
-#         new_class = super(DeclarativeFieldsMetaclass, mcs).__new__(mcs, name, bases, attrs)
-#
-#         # Walk through the MRO.
-#         declared_fields = OrderedDict()
-#         for base in reversed(new_class.__mro__):
-#             # Collect fields from base class.
-#             if hasattr(base, 'declared_fields'):
-#                 declared_fields.update(base.declared_fields)
-#
-#             # Field shadowing.
-#             for attr, value in base.__dict__.items():
-#                 if value is None and attr in declared_fields:
-#                     declared_fields.pop(attr)
-#
-#         new_class._declared_fields = declared_fields
-#
-#         return new_class
+class FileField(fields.Inferred):
+    pass
+
+
+class ImageField(fields.Inferred):
+    pass
+
+
+class SlugField(fields.Inferred):
+    pass
+
+
+class IPAddress(fields.Inferred):
+    pass
+
+
+class FilePath(fields.Inferred):
+    pass
 
 
 SCHEMA_FIELD_MAPPING = {
-    models.CharField: fields.Str,
-    models.DateTimeField: fields.DateTime
+    models.AutoField: fields.Integer,
+    models.BigIntegerField: fields.Integer,
+    models.BooleanField: fields.Boolean,
+    models.CharField: fields.String,
+    models.CommaSeparatedIntegerField: fields.String,
+    models.DateField: fields.Date,
+    models.DateTimeField: fields.DateTime,
+    models.DecimalField: fields.Decimal,
+    models.EmailField: fields.Email,
+    models.Field: fields.Inferred,
+    models.FileField: FileField,
+    models.FloatField: fields.Float,
+    models.ImageField: ImageField,
+    models.IntegerField: fields.Integer,
+    models.NullBooleanField: fields.Boolean,
+    models.PositiveIntegerField: fields.Integer,
+    models.PositiveSmallIntegerField: fields.Integer,
+    models.SlugField: SlugField,
+    models.SmallIntegerField: fields.Integer,
+    models.TextField: fields.String,
+    models.TimeField: fields.Time,
+    models.URLField: fields.URL,
+    models.GenericIPAddressField: IPAddress,
+    models.FilePathField: FilePath,
+    models.DurationField: fields.TimeDelta,
 }
 
 
