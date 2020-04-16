@@ -41,7 +41,7 @@ class PostModelSchema(ModelSchema):
 
     class Meta:
         model = Post
-        fields = ('created_at', 'title', 'category', 'is_published', 'post')
+        fields = '__all__'
         ordered = True
 
 

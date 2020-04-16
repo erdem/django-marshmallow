@@ -10,6 +10,7 @@ from marshmallow.schema import SchemaMeta, SchemaOpts
 
 from marshmallow import Schema, fields
 
+from django_marshmallow.utils import get_field_info
 
 ALL_FIELDS = '__all__'
 
@@ -17,8 +18,14 @@ ALL_FIELDS = '__all__'
 class ModelSchemaOpts(SchemaOpts):
 
     def __init__(self, meta, ordered: bool = False):
+        fields = getattr(meta, 'fields', None)
+
+        # Bypass Marshmallow Option class validation for "__all__" fields. #FixMe
+        if fields == ALL_FIELDS:
+            meta.fields = ()
         super(ModelSchemaOpts, self).__init__(meta, ordered)
-        self.fields = getattr(meta, 'fields', None)
+        if self.fields == ():
+            self.fields = None
         self.model = getattr(meta, 'model', None)
         self.level = getattr(meta, 'level', None)
         self.exclude = getattr(meta, 'exclude', ())
@@ -74,23 +81,20 @@ SCHEMA_FIELD_MAPPING = {
 
 
 def fields_for_model(model, fields, exclude, **kwargs):
+    model_field_info = get_field_info(model)
     field_list = []
     ignored = []
-    opts = model._meta
-    # Avoid circular import
-    from django.db.models.fields import Field as ModelField
-    sortable_private_fields = [f for f in opts.private_fields if isinstance(f, ModelField)]
-    for f in sorted(chain(opts.concrete_fields, sortable_private_fields, opts.many_to_many)):
-        if fields is not None and f.name not in fields:
+    for field_name, field in model_field_info.all_fields.items():
+        if fields is not None and field_name not in fields:
             continue
-        if exclude and f.name in exclude:
+        if exclude and field_name in exclude:
             continue
-        model_schema_field = SCHEMA_FIELD_MAPPING.get(f.__class__)
+        model_schema_field = SCHEMA_FIELD_MAPPING.get(field.__class__)
 
         if model_schema_field:
-            field_list.append((f.name, model_schema_field(**kwargs)))
+            field_list.append((field_name, model_schema_field(**kwargs)))
         else:
-            ignored.append(f.name)
+            ignored.append((field_name, field))
     field_dict = OrderedDict(field_list)
     return field_dict
 
@@ -98,24 +102,7 @@ def fields_for_model(model, fields, exclude, **kwargs):
 class ModelSchemaMetaclass(SchemaMeta):
     def __new__(mcs, name, bases, attrs):
         new_class = super(ModelSchemaMetaclass, mcs).__new__(mcs, name, bases, attrs)
-        # meta = getattr(new_class, 'Meta', None)
-        # if not meta:
-        #     return new_class
         opts = new_class._meta = new_class.OPTIONS_CLASS(meta=getattr(new_class, 'Meta', None))
-
-        # We check if a string was passed to `fields` or `exclude`,
-        # which is likely to be a mistake where the user typed ('foo') instead
-        # of ('foo',)
-        for opt in ['fields', 'exclude']:
-            value = getattr(opts, opt)
-            if isinstance(value, str) and value != ALL_FIELDS:
-                msg = ("%(model)s.Meta.%(opt)s cannot be a string. "
-                       "Did you mean to type: ('%(value)s',)?" % {
-                           'model': new_class.__name__,
-                           'opt': opt,
-                           'value': value,
-                       })
-                raise TypeError(msg)
 
         if opts.model:
             # If a model is defined, extract form fields from it.
