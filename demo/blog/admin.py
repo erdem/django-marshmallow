@@ -2,6 +2,7 @@ import json
 
 from django import forms
 from django.contrib import admin
+from django.db import models
 from django.utils.safestring import mark_safe
 from marshmallow import Schema, fields
 from rest_framework import serializers
@@ -13,8 +14,9 @@ from django_marshmallow.schemas import ModelSchema
 class PostSerializer(serializers.ModelSerializer):
 
     class Meta:
-        fields = ('title', 'created_at')
+        fields = '__all__'
         model = Post
+        depth = 2
 
 
 class PostAdminForm(forms.ModelForm):
@@ -48,7 +50,7 @@ class PostModelSchema(ModelSchema):
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
     form = PostAdminForm
-    list_display = ('title', 'rest_serializer_response', 'original_schema_response', 'model_schema_response', 'created_at')
+    list_display = ('title', 'rest_serializer_response', 'model_schema_response', 'original_schema_response', 'created_at')
     list_filter = ('category', 'tags')
 
     def rest_serializer_response(self, post):
