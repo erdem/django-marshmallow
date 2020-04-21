@@ -142,6 +142,7 @@ def _merge_all_fields(pk, fields, forward_relations, reverse_relations):
     all_fields.update(reverse_relations)
     return all_fields
 
+
 def _merge_fields_and_pk(pk, fields):
     fields_and_pk = OrderedDict()
     fields_and_pk['pk'] = pk
