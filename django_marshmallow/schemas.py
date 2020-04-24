@@ -6,7 +6,7 @@ from marshmallow.schema import SchemaMeta, SchemaOpts
 
 from marshmallow import Schema
 
-from django_marshmallow.converter import ModelConverter
+from django_marshmallow.converter import ModelFieldConverter
 
 
 ALL_FIELDS = '__all__'
@@ -20,11 +20,12 @@ class ModelSchemaOpts(SchemaOpts):
         if fields == ALL_FIELDS:
             meta.fields = ()
         super(ModelSchemaOpts, self).__init__(meta, ordered)
-        self._auto_generated_class = getattr(meta, '_auto_generated_class', False)
         if self.fields == ():
             self.fields = None
-        self.model = getattr(meta, "model", None)
-        self.model_converter = getattr(meta, "model_converter", ModelConverter)
+        self.model = getattr(meta, 'model', None)
+        self.model_converter = getattr(meta, 'model_converter', ModelFieldConverter)
+        self.level = getattr(meta, 'level', 0)
+
         self.include_fk = getattr(meta, "include_fk", False)
         self.include_relationships = getattr(meta, "include_relationships", True)
         # Default load_instance to True for backwards compatibility
@@ -44,7 +45,13 @@ class ModelSchemaMetaclass(SchemaMeta):
                     "or the 'exclude' attribute is prohibited; form %s "
                     "needs updating." % klass.__class__.__name__
                 )
+        level = opts.level
+        if level is not None:
+            assert level >= 0, "'level' may not be negative."
+            assert level <= 10, "'level' may not be greater than 10."
         # FixMe add all cases
+
+
 
     @classmethod
     def get_declared_fields(mcs, klass, cls_fields, inherited_fields, dict_cls):

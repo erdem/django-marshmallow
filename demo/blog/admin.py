@@ -2,7 +2,6 @@ import json
 
 from django import forms
 from django.contrib import admin
-from django.db import models
 from django.utils.safestring import mark_safe
 from marshmallow import Schema, fields
 from rest_framework import serializers
@@ -39,12 +38,13 @@ class CategorySchema(ModelSchema):
 
 
 class PostModelSchema(ModelSchema):
-    category = fields.Nested(CategorySchema)
+    # category = fields.Nested(CategorySchema)
 
     class Meta:
         model = Post
         fields = '__all__'
         ordered = True
+        level = 1
 
 
 @admin.register(Post)
@@ -78,3 +78,6 @@ class CategoryAdmin(admin.ModelAdmin):
 class TagAdmin(admin.ModelAdmin):
     list_display = ('name', 'created_at')
     list_filter = ('created_at',)
+
+admin.register(Tag)
+admin.register(Category)

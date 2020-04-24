@@ -27,7 +27,7 @@ class FilePath(ma.fields.Inferred):
     pass
 
 
-class ModelConverter:
+class ModelFieldConverter:
     """
     Class that converts a Django model into a dictionary of corresponding
     marshmallow `Fields <marshmallow.fields.Field>`.
@@ -69,7 +69,6 @@ class ModelConverter:
     # serializer_url_field = HyperlinkedIdentityField
     # serializer_choice_field = ChoiceField
 
-
     DIRECTION_MAPPING = {
         'MANY_TO_ONE': False,
         'MANY_TO_MANY': True,
@@ -88,8 +87,8 @@ class ModelConverter:
 
     def fields_for_model(
         self,
-        model,
-        klass,  # todo think again
+        model,  # fixme there are too many paramaters here
+        klass,
         *,
         include_fk=False,
         include_relationships=False,
@@ -99,10 +98,10 @@ class ModelConverter:
         dict_cls=dict,
     ):
         opts = klass.opts
+        nested_level = opts.level
         model = opts.model
         fields = opts.fields
         exclude = opts.exclude
-        auto_generated_class = opts._auto_generated_class
         model_field_info = get_field_info(model)
         field_list = []
         ignored = []
@@ -111,12 +110,11 @@ class ModelConverter:
                 continue
             if exclude and field_name in exclude:
                 continue
+
             relation_info = model_field_info.relations.get(field_name)
-            if relation_info and not relation_info.reverse and not auto_generated_class:
+            if relation_info and not relation_info.reverse and nested_level:
                 relation_info = model_field_info.relations[field_name]
-                if relation_info.reverse:
-                    continue
-                model_schema_field = self.build_nested_field(klass, field_name, relation_info)
+                model_schema_field = self.build_nested_field(klass, field_name, relation_info, nested_level)
                 field_list.append(model_schema_field)
                 continue
 
@@ -133,12 +131,12 @@ class ModelConverter:
     def build_field(self, field_name, model_schema_field, **field_kwargs):
         return field_name, model_schema_field(**field_kwargs)
 
-    def build_nested_field(self, new_class, field_name, relation_info, **field_kwargs):
+    def build_nested_field(self, new_class, field_name, relation_info, nested_level, **field_kwargs):
         class NestedSerializer(new_class):
             class Meta:
                 model = relation_info.related_model
                 fields = '__all__'
-                auto_generated_class = True
+                level = nested_level - 1
         field_kwargs['many'] = relation_info.to_many
         field_class = ma.fields.Nested(NestedSerializer, **field_kwargs)
         return field_name, field_class
