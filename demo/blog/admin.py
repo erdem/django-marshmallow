@@ -38,13 +38,11 @@ class CategorySchema(ModelSchema):
 
 
 class PostModelSchema(ModelSchema):
-    # category = fields.Nested(CategorySchema)
 
     class Meta:
         model = Post
         fields = '__all__'
         ordered = True
-        level = 1
 
 
 @admin.register(Post)
@@ -78,6 +76,7 @@ class CategoryAdmin(admin.ModelAdmin):
 class TagAdmin(admin.ModelAdmin):
     list_display = ('name', 'created_at')
     list_filter = ('created_at',)
+
 
 admin.register(Tag)
 admin.register(Category)

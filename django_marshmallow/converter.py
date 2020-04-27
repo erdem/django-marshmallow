@@ -1,8 +1,10 @@
+import typing
 from collections import OrderedDict
 
 from django.db import models
 
 import marshmallow as ma
+from rest_framework.utils.field_mapping import get_relation_kwargs
 
 from django_marshmallow.utils import get_field_info
 
@@ -25,6 +27,36 @@ class IPAddress(ma.fields.Inferred):
 
 class FilePath(ma.fields.Inferred):
     pass
+
+
+class RelatedField(ma.fields.Field):
+
+    def __init__(
+            self,
+            model_field=None,
+            related_model=None,
+            to_many=None,
+            to_field=None,
+            has_through_model=None,
+            reverse=None,
+            **kwargs
+    ):
+        super().__init__(**kwargs)
+        self.model_field = model_field
+        self.related_model = related_model
+        self.to_many = to_many
+        self.to_field = to_field
+        self.has_through_model = has_through_model
+        self.reverse = reverse
+
+    def _serialize(self, value: typing.Any, attr: str, obj: typing.Any, **kwargs):
+        # if self.reverse:
+        #     return "REVERSE"
+        if self.to_many:
+            value = list(value.values_list('pk', flat=True))
+        if self.to_field:
+            value = getattr(value, self.to_field)
+        return super()._serialize(value, attr, obj, **kwargs)
 
 
 class ModelFieldConverter:
@@ -61,6 +93,8 @@ class ModelFieldConverter:
         models.FilePathField: FilePath,
         models.DurationField: ma.fields.TimeDelta,
     }
+
+    related_field = RelatedField
 
     # if ModelDurationField is not None:
     #     serializer_field_mapping[ModelDurationField] = DurationField
@@ -112,9 +146,20 @@ class ModelFieldConverter:
                 continue
 
             relation_info = model_field_info.relations.get(field_name)
-            if relation_info and not relation_info.reverse and nested_level:
-                relation_info = model_field_info.relations[field_name]
-                model_schema_field = self.build_nested_field(klass, field_name, relation_info, nested_level)
+            if relation_info:
+                if nested_level:
+                    model_schema_field = self.build_nested_field(
+                        klass,
+                        field_name,
+                        relation_info,
+                        nested_level
+                    )
+                else:
+                    model_schema_field = self.build_relational_field(
+                        klass,
+                        field_name,
+                        relation_info
+                    )
                 field_list.append(model_schema_field)
                 continue
 
@@ -140,3 +185,8 @@ class ModelFieldConverter:
         field_kwargs['many'] = relation_info.to_many
         field_class = ma.fields.Nested(NestedSerializer, **field_kwargs)
         return field_name, field_class
+
+    def build_relational_field(self, klass, field_name, relation_info):
+        field_class = self.related_field
+        model_field, related_model, to_many, to_field, has_through_model, reverse = relation_info
+        return field_name, field_class(model_field, related_model, to_many, to_field, has_through_model, reverse)
