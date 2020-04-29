@@ -30,11 +30,10 @@ class PostOrginalSchema(Schema):
 
 
 class CategorySchema(ModelSchema):
-    name = fields.String()
 
     class Meta:
         model = Category
-        exclude = ('name',)
+        fields = '__all__'
 
 
 class PostModelSchema(ModelSchema):
@@ -47,8 +46,7 @@ class PostModelSchema(ModelSchema):
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    form = PostAdminForm
-    list_display = ('title', 'rest_serializer_response', 'model_schema_response', 'original_schema_response', 'created_at')
+    list_display = ('title', 'rest_serializer_response', 'model_schema_response', 'load_model_schema', 'created_at')
     list_filter = ('category', 'tags')
 
     def rest_serializer_response(self, post):
@@ -59,6 +57,17 @@ class PostAdmin(admin.ModelAdmin):
         schema = PostOrginalSchema()
         data = schema.dump(post)
         return mark_safe(f'<pre>{json.dumps(data, indent=4)}</pre>')
+
+    def load_model_schema(self, post):
+        schema = PostModelSchema()
+        data = {
+            'title': 'first schema post',
+            'is_published': True,
+            'category': 1,
+            'tags': [1,2]
+        }
+        erros = schema.load(data)
+        return mark_safe(f'<pre>{json.dumps(erros, indent=4)}</pre>')
 
     def model_schema_response(self, post):
         schema = PostModelSchema()

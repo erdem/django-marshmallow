@@ -1,12 +1,21 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
+def validate_category_name(value):
+    if not '+' in value:
+        raise ValidationError(
+            _('%(value)s add "+" plus'),
+            params={'value': value},
+        )
+
+
 class Category(models.Model):
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, validators=[validate_category_name])
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.name
+        return self.name or ''
 
 
 class Tag(models.Model):
@@ -18,22 +27,20 @@ class Tag(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.name
+        return self.name or ''
 
 
 class Post(models.Model):
     category = models.ForeignKey(
         Category,
-        blank=True,
-        null=True,
-        on_delete=models.SET_NULL
+        on_delete=models.CASCADE
     )
-    tags = models.ManyToManyField(Tag, blank=True)
+    tags = models.ManyToManyField(Tag)
 
-    title = models.CharField(max_length=255, blank=True, null=True)
+    title = models.CharField(max_length=255)
     post = models.TextField(blank=True, null=True)
     is_published = models.BooleanField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.title
+        return self.title or ''
