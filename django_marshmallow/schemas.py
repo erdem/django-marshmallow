@@ -27,6 +27,7 @@ class ModelSchemaOpts(SchemaOpts):
         self.model = getattr(meta, 'model', None)
         self.model_converter = getattr(meta, 'model_converter', ModelFieldConverter)
         self.level = getattr(meta, 'level', 0)
+        self.pk_field = getattr(meta, 'pk_field', 'id')
 
         self.include_fk = getattr(meta, "include_fk", False)
         self.include_relationships = getattr(meta, "include_relationships", True)
@@ -52,8 +53,6 @@ class ModelSchemaMetaclass(SchemaMeta):
             assert level >= 0, "'level' may not be negative."
             assert level <= 10, "'level' may not be greater than 10."
         # FixMe add all cases
-
-
 
     @classmethod
     def get_declared_fields(mcs, klass, cls_fields, inherited_fields, dict_cls):
@@ -94,12 +93,20 @@ class ModelSchemaMetaclass(SchemaMeta):
 class BaseModelSchema(Schema, metaclass=ModelSchemaMetaclass):
     OPTIONS_CLASS = ModelSchemaOpts
 
+    @cached_property
+    def model_class(self):
+        return self.opts.model
+
     def get_fields(self):
         return copy.deepcopy(self._declared_fields)
 
     @cached_property
     def fields(self):
         return self.get_fields()
+
+    @cached_property
+    def pk_field(self):
+        return self.opts.pk_field
 
     def _serialize(self, obj, many=False, *args, **kwargs):
         if many and isinstance(obj, models.Manager):
@@ -110,13 +117,19 @@ class BaseModelSchema(Schema, metaclass=ModelSchemaMetaclass):
                  partial: typing.Union[bool, types.StrSequenceOrSet] = None) -> typing.Dict[str, typing.List[str]]:
         return super().validate(data, many=many, partial=partial)
 
-    def load(self, data, **kwargs):
-        validated_data = super().load(data, **kwargs)
-        if self.many:
-            return [self.save(v) for v in data]
-        return self.save(validated_data)
+    @property
+    def validated_data(self):
+        if not hasattr(self, '_validated_data'):
+            msg = 'You must call `.load()` or `.validate()` before accessing `.validated_data`.'
+            raise AssertionError(msg)
+        return self._validated_data
 
-    def save(self, validated_data):
+    def _do_load(self, data, **kwargs):
+        self._validated_data = super()._do_load(data, **kwargs)
+        return self._validated_data
+
+    def save(self, validated_data=None):
+        data = validated_data or self.validated_data
         ModelClass = self.opts.model
 
         # Remove many-to-many relationships from validated_data.
@@ -125,17 +138,18 @@ class BaseModelSchema(Schema, metaclass=ModelSchemaMetaclass):
         info = get_field_info(ModelClass)
         many_to_many = {}
         for field_name, relation_info in info.relations.items():
-            if relation_info.to_many and (field_name in validated_data):
-                many_to_many[field_name] = validated_data.pop(field_name)
-
-            # if not relation_info.to_many and relation_info.to_field and (field_name in validated_data):
-            #     relation = validated_data[field_name]
-            #     relation.save()
-            #     validated_data[field_name] = relation
-
+            if relation_info.to_many and (field_name in data):
+                many_to_many[field_name] = data.pop(field_name)
 
         try:
-            instance = ModelClass._default_manager.create(**validated_data)
+            if self.many:
+                instance = []
+                for d in data:
+                    o = ModelClass(**d)
+                    o.save()
+                    instance.append(o)
+            else:
+                instance = ModelClass._default_manager.create(**data)
         except TypeError:
             msg = (
                 'Got a `TypeError` when calling `%s.%s.create()`. '

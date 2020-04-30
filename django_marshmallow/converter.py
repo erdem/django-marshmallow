@@ -45,8 +45,12 @@ class RelatedNested(ma.fields.Nested):
                 ' `related_model` parameter.'
             )
 
+    def _load(self, value, data, partial=None):
+        return super()._load(value, data, partial)
+
     def _deserialize(self, value, attr, data, partial=None, **kwargs):
-        return super()._deserialize(value, attr, data, partial, **kwargs)
+        super()._deserialize(value, attr, data, partial, **kwargs)
+        return self.schema.save()
 
 
 class RelatedField(ma.fields.Field):
