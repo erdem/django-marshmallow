@@ -42,11 +42,12 @@ class PostModelSchema(ModelSchema):
         model = Post
         fields = '__all__'
         ordered = True
+        level = 1
 
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    list_display = ('title', 'rest_serializer_response', 'model_schema_response', 'load_model_schema', 'created_at')
+    list_display = ('title', 'load_model_schema', 'created_at')
     list_filter = ('category', 'tags')
 
     def rest_serializer_response(self, post):
@@ -59,15 +60,27 @@ class PostAdmin(admin.ModelAdmin):
         return mark_safe(f'<pre>{json.dumps(data, indent=4)}</pre>')
 
     def load_model_schema(self, post):
+        if Post.objects.filter(title='first schema post').exists():
+            return 'done'
         schema = PostModelSchema()
         data = {
             'title': 'first schema post',
             'is_published': True,
-            'category': 1,
-            'tags': [1,2]
+            'category': {
+                'name': 'new category'
+            },
+            'tags': [
+                {
+                    'name': 'new tag 1',
+                },
+                {
+                    'name': 'new tag 2'
+                }
+            ]
         }
-        erros = schema.load(data)
-        return mark_safe(f'<pre>{json.dumps(erros, indent=4)}</pre>')
+        instance = schema.load(data)
+        data['instance_id'] = instance.id
+        return mark_safe(f'<pre>{json.dumps(data, indent=4)}</pre>')
 
     def model_schema_response(self, post):
         schema = PostModelSchema()

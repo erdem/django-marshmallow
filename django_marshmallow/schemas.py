@@ -1,13 +1,15 @@
 import copy
+import typing
 
 from django.core.exceptions import ImproperlyConfigured
+from django.db import models
 from django.utils.functional import cached_property
 from marshmallow.schema import SchemaMeta, SchemaOpts
 
-from marshmallow import Schema
+from marshmallow import Schema, types
 
 from django_marshmallow.converter import ModelFieldConverter
-
+from django_marshmallow.utils import get_field_info
 
 ALL_FIELDS = '__all__'
 
@@ -100,9 +102,65 @@ class BaseModelSchema(Schema, metaclass=ModelSchemaMetaclass):
         return self.get_fields()
 
     def _serialize(self, obj, many=False, *args, **kwargs):
-        if many:
+        if many and isinstance(obj, models.Manager):
             obj = obj.get_queryset()
         return super()._serialize(obj, many=many)
+
+    def validate(self, data: typing.Mapping, *, many: bool = None,
+                 partial: typing.Union[bool, types.StrSequenceOrSet] = None) -> typing.Dict[str, typing.List[str]]:
+        return super().validate(data, many=many, partial=partial)
+
+    def load(self, data, **kwargs):
+        validated_data = super().load(data, **kwargs)
+        if self.many:
+            return [self.save(v) for v in data]
+        return self.save(validated_data)
+
+    def save(self, validated_data):
+        ModelClass = self.opts.model
+
+        # Remove many-to-many relationships from validated_data.
+        # They are not valid arguments to the default `.create()` method,
+        # as they require that the instance has already been saved.
+        info = get_field_info(ModelClass)
+        many_to_many = {}
+        for field_name, relation_info in info.relations.items():
+            if relation_info.to_many and (field_name in validated_data):
+                many_to_many[field_name] = validated_data.pop(field_name)
+
+            # if not relation_info.to_many and relation_info.to_field and (field_name in validated_data):
+            #     relation = validated_data[field_name]
+            #     relation.save()
+            #     validated_data[field_name] = relation
+
+
+        try:
+            instance = ModelClass._default_manager.create(**validated_data)
+        except TypeError:
+            msg = (
+                'Got a `TypeError` when calling `%s.%s.create()`. '
+                'This may be because you have a writable field on the '
+                'serializer class that is not a valid argument to '
+                '`%s.%s.create()`. You may need to make the field '
+                'read-only, or override the %s.create() method to handle '
+                'this correctly.\nOriginal exception' %
+                (
+                    ModelClass.__name__,
+                    ModelClass._default_manager.name,
+                    ModelClass.__name__,
+                    ModelClass._default_manager.name,
+                    self.__class__.__name__,
+                )
+            )
+            raise TypeError(msg)
+
+        # Save many-to-many relationships after the instance is created.
+        if many_to_many:
+            for field_name, value in many_to_many.items():
+                field = getattr(instance, field_name)
+                field.set(value)
+
+        return instance
 
 
 class ModelSchema(BaseModelSchema):
