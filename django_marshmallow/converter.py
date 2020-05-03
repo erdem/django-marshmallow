@@ -266,10 +266,7 @@ class ModelFieldConverter:
         if model_field.primary_key and not model_field.editable:
             kwargs['dump_only'] = True
 
-        if model_field.has_default() or model_field.blank or model_field.null:
-            kwargs['required'] = False
-        else:
-            kwargs['required'] = True
+        kwargs['required'] = model_field.has_default() or model_field.blank or model_field.null
 
         if model_field.verbose_name:
             metadata['label'] = capfirst(model_field.verbose_name)
