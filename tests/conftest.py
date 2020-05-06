@@ -42,7 +42,7 @@ def db_models():
             f'Errors: {error_msgs}')
 
     return SimpleNamespace(
-        SimpleRegularModel=test_models.SimpleRegularModel,
+        SimpleTestModel=test_models.SimpleTestModel,
         RegularFieldsModel=test_models.RegularFieldsModel,
         FieldOptionsModel=test_models.FieldOptionsModel,
         ChoicesModel=test_models.ChoicesModel,

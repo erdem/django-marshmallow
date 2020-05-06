@@ -24,42 +24,76 @@ class ModelSchemaOpts(SchemaOpts):
         super(ModelSchemaOpts, self).__init__(meta, ordered)
         if self.fields == ():
             self.fields = None
+
         self.model = getattr(meta, 'model', None)
         self.model_converter = getattr(meta, 'model_converter', ModelFieldConverter)
         self.level = getattr(meta, 'level', 0)
-        self.pk_field = getattr(meta, 'pk_field', 'id')
+        self.ordered = getattr(meta, "ordered", True)
 
-        self.include_fk = getattr(meta, "include_fk", False)
+        self.include_fk = getattr(meta, "include_fk", True)
         self.include_relationships = getattr(meta, "include_relationships", True)
-        # Default load_instance to True for backwards compatibility
-        self.load_instance = getattr(meta, "load_instance", True)
+        self.include_reverse_relationships = getattr(meta, "include_relationships", False)
 
 
 class ModelSchemaMetaclass(SchemaMeta):
 
+    def __new__(mcs, name, bases, attrs):
+        return super().__new__(mcs, name, bases, attrs)
+
     @classmethod
-    def validate_schema_class(mcs, klass):
+    def validate_schema_option_class(mcs, klass):
         opts = klass.opts
-        if opts.model:
-            # If a model is defined, extract form fields from it.
-            if opts.fields is None and opts.exclude is None:
-                raise ImproperlyConfigured(
-                    "Creating a ModelForm without either the 'fields' attribute "
-                    "or the 'exclude' attribute is prohibited; form %s "
-                    "needs updating." % klass.__class__.__name__
-                )
+        fields = opts.fields
+        exclude = opts.exclude
+        model = opts.model
+
+        if not model:
+            raise ImproperlyConfigured(
+                'Creating a ModelSchema without `Meta.model` attribute is prohibited; %s '
+                'needs updating.' % klass.__name__
+            )
+
+        if not fields and not exclude:
+            raise ImproperlyConfigured(
+                'Creating a ModelSchema without either `Meta.fields` attribute '
+                'or `Meta.exclude` attribute is prohibited; %s '
+                'needs updating.' % klass.__name__
+            )
+
+        if fields and fields != ALL_FIELDS and not isinstance(fields, (list, tuple)):
+            raise TypeError(
+                'The `fields` option must be a list or tuple or "__all__". '
+                'Got %s.' % type(fields).__name__
+            )
+
+        if exclude and not isinstance(exclude, (list, tuple)):
+            raise TypeError(
+                f'The `exclude` option must be a list or tuple. Got {type(exclude).__name__}.'
+            )
+
+        if fields and exclude:
+            raise ImproperlyConfigured(
+                f'Cannot set `fields` and `exclude` options both together on model schemas.'
+                f'{klass.__class__.__name__} needs updating.'
+            )
+
         level = opts.level
         if level is not None:
-            assert level >= 0, "'level' may not be negative."
-            assert level <= 10, "'level' may not be greater than 10."
-        # FixMe add all cases
+            assert level >= 0, "'level' cannot be negative."
+            assert level <= 10, "'level' cannot be greater than 10."
 
     @classmethod
     def get_declared_fields(mcs, klass, cls_fields, inherited_fields, dict_cls):
-        """Updates declared fields with fields converted from the SQLAlchemy model
-        passed as the `model` class Meta option.
         """
-        mcs.validate_schema_class(klass)
+        Updates declared fields with fields converted from the django model
+        passed as the `model` on Meta options.
+        """
+
+        # avoid to declare fields for base structure classes
+        if klass.__name__ in ('BaseModelSchema', 'ModelSchema'):
+            return super().get_declared_fields(klass, cls_fields, inherited_fields, dict_cls)
+
+        mcs.validate_schema_option_class(klass)
         opts = klass.opts
         if opts.fields == ALL_FIELDS:
             # Sentinel for fields_for_model to indicate "get the list of
@@ -120,8 +154,9 @@ class BaseModelSchema(Schema, metaclass=ModelSchemaMetaclass):
     @property
     def validated_data(self):
         if not hasattr(self, '_validated_data'):
-            msg = 'You must call `.load()` or `.validate()` before accessing `.validated_data`.'
-            raise AssertionError(msg)
+            raise AssertionError(
+                'You must call `.load()` or `.validate()` before accessing `.validated_data`.'
+            )
         return self._validated_data
 
     def _do_load(self, data, **kwargs):

@@ -21,8 +21,11 @@ class TestAbstractModel(models.Model):
         abstract = True
 
 
-class SimpleRegularModel(TestAbstractModel):
-    char_field = models.CharField(max_length=255)
+class SimpleTestModel(TestAbstractModel):
+    name = models.CharField(max_length=255)
+    text = models.TextField(blank=True)
+    published_date = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
 
 class RegularFieldsModel(TestAbstractModel):
