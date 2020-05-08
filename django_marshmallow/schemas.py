@@ -11,6 +11,7 @@ from marshmallow import Schema, types
 from django_marshmallow.converter import ModelFieldConverter
 from django_marshmallow.utils import get_field_info
 
+
 ALL_FIELDS = '__all__'
 
 
@@ -18,16 +19,17 @@ class ModelSchemaOpts(SchemaOpts):
 
     def __init__(self, meta, ordered: bool = False):
         fields = getattr(meta, 'fields', None)
-        # Bypass Marshmallow Option class validation for "__all__" fields. FixMe
+        self.model = getattr(meta, 'model', None)
+
+        # Bypass Marshmallow options class `fields` attribute validation for "__all__" option.
         if fields == ALL_FIELDS:
             meta.fields = ()
         super(ModelSchemaOpts, self).__init__(meta, ordered)
-        if self.fields == ():
+        if fields == ALL_FIELDS:
             self.fields = None
 
-        self.model = getattr(meta, 'model', None)
         self.model_converter = getattr(meta, 'model_converter', ModelFieldConverter)
-        self.level = getattr(meta, 'level', 0)
+        self.level = getattr(meta, 'level', None)
         self.ordered = getattr(meta, "ordered", True)
 
         self.include_fk = getattr(meta, "include_fk", True)
@@ -36,9 +38,6 @@ class ModelSchemaOpts(SchemaOpts):
 
 
 class ModelSchemaMetaclass(SchemaMeta):
-
-    def __new__(mcs, name, bases, attrs):
-        return super().__new__(mcs, name, bases, attrs)
 
     @classmethod
     def validate_schema_option_class(mcs, klass):
@@ -50,37 +49,26 @@ class ModelSchemaMetaclass(SchemaMeta):
         if not model:
             raise ImproperlyConfigured(
                 'Creating a ModelSchema without `Meta.model` attribute is prohibited; %s '
-                'needs updating.' % klass.__name__
+                'schema class needs updating.' % klass.__name__
             )
 
         if not fields and not exclude:
             raise ImproperlyConfigured(
                 'Creating a ModelSchema without either `Meta.fields` attribute '
                 'or `Meta.exclude` attribute is prohibited; %s '
-                'needs updating.' % klass.__name__
-            )
-
-        if fields and fields != ALL_FIELDS and not isinstance(fields, (list, tuple)):
-            raise TypeError(
-                'The `fields` option must be a list or tuple or "__all__". '
-                'Got %s.' % type(fields).__name__
-            )
-
-        if exclude and not isinstance(exclude, (list, tuple)):
-            raise TypeError(
-                f'The `exclude` option must be a list or tuple. Got {type(exclude).__name__}.'
+                'schema class needs updating.' % klass.__name__
             )
 
         if fields and exclude:
             raise ImproperlyConfigured(
                 f'Cannot set `fields` and `exclude` options both together on model schemas.'
-                f'{klass.__class__.__name__} needs updating.'
+                f'{klass.__class__.__name__} schema class needs updating.'
             )
 
         level = opts.level
         if level is not None:
-            assert level >= 0, "'level' cannot be negative."
-            assert level <= 10, "'level' cannot be greater than 10."
+            assert level >= 0, f'`level` cannot be negative. {klass.__class__.__name__} schema class schema class needs updating.'
+            assert level <= 10, f'`level` cannot be greater than 10. {klass.__class__.__name__} schema class schema class needs updating.'
 
     @classmethod
     def get_declared_fields(mcs, klass, cls_fields, inherited_fields, dict_cls):
