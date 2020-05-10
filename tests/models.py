@@ -8,7 +8,7 @@ from django.core.validators import MinValueValidator, MinLengthValidator, MaxVal
 from django.db import models
 
 
-class CustomField(models.Field):
+class CustomField(models.CharField):
     """
     A custom model field simply for testing purposes.
     """
@@ -28,31 +28,35 @@ class SimpleTestModel(TestAbstractModel):
     created_at = models.DateTimeField(auto_now_add=True)
 
 
-class RegularFieldsModel(TestAbstractModel):
+class DataFieldsModel(TestAbstractModel):
     """
-    A model class for testing regular flat fields.
+    A model class for testing data fields (non-related fields).
     """
     auto_field = models.AutoField(primary_key=True)
     big_integer_field = models.BigIntegerField()
     boolean_field = models.BooleanField(default=False)
-    char_field = models.CharField(max_length=100)
+    char_field = models.CharField(max_length=255)
     date_field = models.DateField()
     datetime_field = models.DateTimeField()
     decimal_field = models.DecimalField(max_digits=3, decimal_places=1)
-    email_field = models.EmailField(max_length=100)
+    email_field = models.EmailField(max_length=255)
     float_field = models.FloatField()
     integer_field = models.IntegerField()
     null_boolean_field = models.NullBooleanField()
     positive_integer_field = models.PositiveIntegerField()
     positive_small_integer_field = models.PositiveSmallIntegerField()
-    slug_field = models.SlugField(max_length=100)
+    slug_field = models.SlugField()
     small_integer_field = models.SmallIntegerField()
-    text_field = models.TextField(max_length=100)
-    file_field = models.FileField(max_length=100)
+    text_field = models.TextField()
+    file_field = models.FileField()
     time_field = models.TimeField()
-    url_field = models.URLField(max_length=100)
-    custom_field = CustomField()
+    url_field = models.URLField(max_length=255)
+    custom_field = CustomField(max_length=255)
     file_path_field = models.FilePathField(path=tempfile.gettempdir())
+
+    @property
+    def property_method(self):
+        return 'property_method'
 
     def method(self):
         return 'method'

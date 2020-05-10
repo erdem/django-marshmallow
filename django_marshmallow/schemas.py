@@ -1,5 +1,4 @@
 import copy
-import typing
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db import models
@@ -26,7 +25,7 @@ class ModelSchemaOpts(SchemaOpts):
             meta.fields = ()
         super(ModelSchemaOpts, self).__init__(meta, ordered)
         if fields == ALL_FIELDS:
-            self.fields = None
+            self.fields = ALL_FIELDS
 
         self.model_converter = getattr(meta, 'model_converter', ModelFieldConverter)
         self.level = getattr(meta, 'level', None)
@@ -134,10 +133,6 @@ class BaseModelSchema(Schema, metaclass=ModelSchemaMetaclass):
         if many and isinstance(obj, models.Manager):
             obj = obj.get_queryset()
         return super()._serialize(obj, many=many)
-
-    def validate(self, data: typing.Mapping, *, many: bool = None,
-                 partial: typing.Union[bool, types.StrSequenceOrSet] = None) -> typing.Dict[str, typing.List[str]]:
-        return super().validate(data, many=many, partial=partial)
 
     @property
     def validated_data(self):

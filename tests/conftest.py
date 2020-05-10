@@ -43,7 +43,7 @@ def db_models():
 
     return SimpleNamespace(
         SimpleTestModel=test_models.SimpleTestModel,
-        RegularFieldsModel=test_models.RegularFieldsModel,
+        DataFieldsModel=test_models.DataFieldsModel,
         FieldOptionsModel=test_models.FieldOptionsModel,
         ChoicesModel=test_models.ChoicesModel,
         UniqueChoiceModel=test_models.UniqueChoiceModel,
