@@ -11,7 +11,7 @@ from django_marshmallow.schemas import ModelSchema
 
 
 @pytest.fixture
-def data_model_instance(db, db_models):
+def data_model_obj(db, db_models):
     instance = db_models.DataFieldsModel(
         big_integer_field=10000000,
         boolean_field=False,
@@ -36,21 +36,8 @@ def data_model_instance(db, db_models):
     file_temp = NamedTemporaryFile(delete=True)
     file_temp.write(file_temp.read(1))
     file_temp.flush()
-    instance.file_field.save(os.path.join('demo/media/test_tmp_file'), File(file_temp))
+    instance.file_field.save(os.path.join('media/test_tmp_file'), File(file_temp))
     file_temp.close()
     instance.save()
     return instance
 
-
-@pytest.mark.django_db
-def test_model_data_fields_serialization(db, db_models, data_model_instance):
-    """Test all model fields serialization without related fields"""
-    # given ... A Model instance©
-    class TestModelSchema(ModelSchema):
-        class Meta:
-            model = db_models.DataFieldsModel
-            fields = '__all__'
-
-    schema = TestModelSchema()
-    data = schema.dump(data_model_instance)
-    assert 'big_integer_field' in data

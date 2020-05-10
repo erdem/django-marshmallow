@@ -1,112 +1,13 @@
-import typing
 from collections import OrderedDict
 
-from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
+from django.utils.text import capfirst
 
 import marshmallow as ma
-from django.utils.text import capfirst
-from marshmallow import validate, types
-from marshmallow.base import SchemaABC
-from rest_framework.utils.field_mapping import get_relation_kwargs
+from marshmallow import validate
 
+from django_marshmallow.fields import InferredField, RelatedField, RelatedNested, ImageField, FileField
 from django_marshmallow.utils import get_field_info
-
-
-class FileField(ma.fields.Inferred):
-    pass
-
-
-class ImageField(ma.fields.Inferred):
-    pass
-
-
-class SlugField(ma.fields.Inferred):
-    pass
-
-
-class IPAddress(ma.fields.Inferred):
-    pass
-
-
-class FilePath(ma.fields.Inferred):
-    pass
-
-
-class RelatedNested(ma.fields.Nested):
-
-    def __init__(self, nested, **kwargs):
-        super().__init__(nested, **kwargs)
-        self.related_model = kwargs.get('related_model', getattr(nested.opts, 'model', None))
-        if not self.related_model:
-            raise ma.exceptions.MarshmallowError(
-                'RelatedNested needs to use with a inherited class of '
-                '"ModelSchema" or can use with a Marshmallow "Schema" class implementation along with'
-                ' `related_model` parameter.'
-            )
-
-    def _load(self, value, data, partial=None):
-        return super()._load(value, data, partial)
-
-    def _deserialize(self, value, attr, data, partial=None, **kwargs):
-        super()._deserialize(value, attr, data, partial, **kwargs)
-        return self.schema.save()
-
-
-class RelatedField(ma.fields.Field):
-
-    default_error_messages = {
-        "invalid": "Could not deserialize related value {value!r}; "
-        "expected a dictionary with keys {keys!r}"
-    }
-
-    def __init__(
-            self,
-            model_field,
-            related_model,
-            to_field,
-            many,
-            has_through_model,
-            is_reverse_relation,
-            **kwargs
-    ):
-        super().__init__(**kwargs)
-
-        self.model_field = model_field
-        self.related_model = related_model
-        self.to_field = to_field
-        self.many = many
-        self.has_through_model = has_through_model
-        self.is_reverse_relation = is_reverse_relation
-
-    def _serialize(self, value: typing.Any, attr: str, obj: typing.Any, **kwargs):
-        if self.is_reverse_relation:  # FixMe
-            return "REVERSE"
-        if self.many and isinstance(value, models.Manager):
-            value = list(value.values_list('pk', flat=True))
-        if self.many and isinstance(value, list):
-            value = [v.id for v in value if isinstance(v, self.related_model)]
-        if self.to_field:
-            value = getattr(value, self.to_field)
-        return super()._serialize(value, attr, obj, **kwargs)
-
-    def _deserialize(self, value: typing.Any, attr: str = None, data: typing.Mapping[str, typing.Any] = None, **kwargs):
-        if self.is_reverse_relation:  # FixMe
-            return "REVERSE"
-        if self.many and isinstance(value, list):
-            data = []
-            for pk in value:
-                try:
-                    data.append(self.related_model._default_manager.get(pk=pk))
-                except ObjectDoesNotExist:
-                    self.make_error('invalid', value=value)
-            return data
-        if self.to_field:
-            try:
-                return self.related_model._default_manager.get(pk=value)
-            except ObjectDoesNotExist:
-                self.make_error('invalid', value=value)
-        return super()._deserialize(value, attr, data, **kwargs)
 
 
 class ModelFieldConverter:
@@ -126,7 +27,7 @@ class ModelFieldConverter:
         models.DecimalField: ma.fields.Decimal,
         models.EmailField: ma.fields.Email,
         models.Field: ma.fields.Inferred,
-        models.FileField: ma.fields.String,
+        models.FileField: FileField,
         models.FloatField: ma.fields.Float,
         models.ImageField: ImageField,
         models.IntegerField: ma.fields.Integer,
@@ -136,7 +37,7 @@ class ModelFieldConverter:
         models.SlugField: ma.fields.String,
         models.SmallIntegerField: ma.fields.Integer,
         models.TextField: ma.fields.String,
-        models.TimeField: ma.fields.Time,
+        models.TimeField: InferredField,
         models.URLField: ma.fields.URL,
         models.IPAddressField: ma.fields.Inferred,
         models.GenericIPAddressField: ma.fields.Inferred,
@@ -157,7 +58,7 @@ class ModelFieldConverter:
         else:
             return ma.Schema.TYPE_MAPPING
 
-    def is_supported_model_field(self, model_field):
+    def is_standard_field(self, model_field):
         return model_field.__class__ in self.SCHEMA_FIELD_MAPPING
 
     def fields_for_model(
@@ -203,9 +104,11 @@ class ModelFieldConverter:
                 field_list.append(model_schema_field)
                 continue
 
-            if self.is_supported_model_field(model_field):
+            if self.is_standard_field(model_field):
                 model_schema_field = self.build_standard_field(field_name, model_field)
-                field_list.append(model_schema_field)
+            else:
+                model_schema_field = self.build_inferred_field(field_name, model_field)
+            field_list.append(model_schema_field)
 
         field_dict = OrderedDict(field_list)
         return field_dict
@@ -214,6 +117,13 @@ class ModelFieldConverter:
         field_class = self.SCHEMA_FIELD_MAPPING.get(model_field.__class__)
         field_kwargs = self.get_schema_field_kwargs(model_field)
         return field_name, field_class(**field_kwargs)
+
+    def build_inferred_field(self, field_name, model_field):
+        """
+        Return a `InferredField` for third party or custom model fields
+        """
+        field_kwargs = self.get_schema_field_kwargs(model_field)
+        return field_name, InferredField(**field_kwargs)
 
     def build_related_nested_field(self, new_class, field_name, relation_info, nested_level):
         class RelatedModelSerializer(new_class):

@@ -126,3 +126,21 @@ class TestModelSchemaOptions:
         # then ... Schema field names should not match with `expected_fields`
         assert len(tuple(schema.fields.keys())) == len(expected_fields)
         assert not tuple(schema.fields.keys()) == expected_fields
+
+
+class TestModelSchemaFieldConverter:
+
+    def test_generated_schema_fields_for_all_fields_option(self, db_models):
+        # given ... ModelSchema class implementation with including all model fields
+        class TestModelSchema(ModelSchema):
+            class Meta:
+                model = db_models.DataFieldsModel
+                fields = '__all__'
+
+        schema = TestModelSchema()
+
+        # then ... serialized data field names should match with django model fields
+        model_fields = db_models.DataFieldsModel._meta.fields
+        model_field_names = [f.name for f in model_fields]
+        schema_field_names = list(schema.fields.keys())
+        assert sorted(schema_field_names) == sorted(model_field_names)
