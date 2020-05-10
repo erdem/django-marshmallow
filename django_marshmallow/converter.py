@@ -110,8 +110,7 @@ class ModelFieldConverter:
                 model_schema_field = self.build_inferred_field(field_name, model_field)
             field_list.append(model_schema_field)
 
-        field_dict = OrderedDict(field_list)
-        return field_dict
+        return OrderedDict(field_list)
 
     def build_standard_field(self, field_name, model_field):
         field_class = self.SCHEMA_FIELD_MAPPING.get(model_field.__class__)

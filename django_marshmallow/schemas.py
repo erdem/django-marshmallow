@@ -1,4 +1,5 @@
 import copy
+from collections import OrderedDict
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db import models
@@ -8,6 +9,7 @@ from marshmallow.schema import SchemaMeta, SchemaOpts
 from marshmallow import Schema, types
 
 from django_marshmallow.converter import ModelFieldConverter
+from django_marshmallow.fields import RelatedField, RelatedNested
 from django_marshmallow.utils import get_field_info
 
 
@@ -124,6 +126,14 @@ class BaseModelSchema(Schema, metaclass=ModelSchemaMetaclass):
     @cached_property
     def fields(self):
         return self.get_fields()
+
+    @cached_property
+    def related_fields(self):
+        related_fields = []
+        for field_name, field in self.fields.items():
+            if isinstance(field, (RelatedField, RelatedNested)):
+                related_fields.append((field_name, field))
+        return OrderedDict(related_fields)
 
     @cached_property
     def pk_field(self):

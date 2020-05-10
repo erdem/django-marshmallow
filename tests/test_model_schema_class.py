@@ -1,6 +1,7 @@
 import pytest
 from django.core.exceptions import ImproperlyConfigured
 
+from django_marshmallow import fields
 from django_marshmallow.schemas import ModelSchema
 
 
@@ -131,7 +132,7 @@ class TestModelSchemaOptions:
 class TestModelSchemaFieldConverter:
 
     def test_generated_schema_fields_for_all_fields_option(self, db_models):
-        # given ... ModelSchema class implementation with including all model fields
+        # given ... ModelSchema class implementation including all data model fields
         class TestModelSchema(ModelSchema):
             class Meta:
                 model = db_models.DataFieldsModel
@@ -144,3 +145,22 @@ class TestModelSchemaFieldConverter:
         model_field_names = [f.name for f in model_fields]
         schema_field_names = list(schema.fields.keys())
         assert sorted(schema_field_names) == sorted(model_field_names)
+
+    def test_related_fields_method(self, db_models):
+        # given ... ModelSchema class implementation (Model has related fields)
+        class TestModelSchema(ModelSchema):
+            class Meta:
+                model = db_models.SimpleRelationsModel
+                fields = ('foreign_key_field', 'many_to_many_field')
+
+        schema = TestModelSchema()
+
+        # then ... Schema `related_fields` method should return `2` fields
+        assert len(schema.related_fields.keys()) == 2
+        # ... Schema ManyToManyField representation field should have `many=True`
+        assert schema.related_fields['many_to_many_field'].many is True
+        # ... Schema ManyToManyField representation field should have `many=True`
+        assert schema.related_fields['foreign_key_field'].many is False
+        # ... Model Related fields should represented as `RelatedField` on schema class
+        assert isinstance(schema.related_fields['many_to_many_field'], fields.RelatedField)
+        assert isinstance(schema.related_fields['foreign_key_field'], fields.RelatedField)

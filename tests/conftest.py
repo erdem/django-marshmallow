@@ -44,6 +44,7 @@ def db_models():
     return SimpleNamespace(
         SimpleTestModel=test_models.SimpleTestModel,
         DataFieldsModel=test_models.DataFieldsModel,
+        SimpleRelationsModel=test_models.SimpleRelationsModel,
         FieldOptionsModel=test_models.FieldOptionsModel,
         ChoicesModel=test_models.ChoicesModel,
         UniqueChoiceModel=test_models.UniqueChoiceModel,

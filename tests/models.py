@@ -104,8 +104,6 @@ class UniqueChoiceModel(TestAbstractModel):
     name = models.CharField(max_length=254, unique=True, choices=CHOICES)
 
 
-# Models for relations tests
-# ManyToMany
 class ManyToManyTarget(TestAbstractModel):
     name = models.CharField(max_length=100)
 
@@ -115,9 +113,16 @@ class ManyToManySource(TestAbstractModel):
     targets = models.ManyToManyField(ManyToManyTarget, related_name='sources')
 
 
-# ForeignKey
 class ForeignKeyTarget(TestAbstractModel):
     name = models.CharField(max_length=100)
+
+
+class SimpleRelationsModel(TestAbstractModel):
+    many_to_many_field = models.ManyToManyField(ManyToManyTarget)
+    foreign_key_field = models.ForeignKey(
+        ForeignKeyTarget,
+        on_delete=models.CASCADE
+    )
 
 
 class UUIDForeignKeyTarget(TestAbstractModel):
