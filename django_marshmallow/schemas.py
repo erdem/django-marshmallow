@@ -33,10 +33,6 @@ class ModelSchemaOpts(SchemaOpts):
         self.level = getattr(meta, 'level', None)
         self.ordered = getattr(meta, "ordered", True)
 
-        self.include_fk = getattr(meta, "include_fk", True)
-        self.include_relationships = getattr(meta, "include_relationships", True)
-        self.include_reverse_relationships = getattr(meta, "include_relationships", False)
-
 
 class ModelSchemaMetaclass(SchemaMeta):
 
@@ -105,8 +101,6 @@ class ModelSchemaMetaclass(SchemaMeta):
                 klass,
                 fields=opts.fields,
                 exclude=opts.exclude,
-                include_fk=opts.include_fk,
-                include_relationships=opts.include_relationships,
                 base_fields=base_fields,
                 dict_cls=dict_cls,
             )

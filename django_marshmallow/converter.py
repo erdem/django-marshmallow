@@ -104,6 +104,9 @@ class ModelFieldConverter:
                 field_list.append(model_schema_field)
                 continue
 
+            if relation_info and relation_info.reverse:  #FixMe
+                continue
+
             if self.is_standard_field(model_field):
                 model_schema_field = self.build_standard_field(field_name, model_field)
             else:

@@ -41,11 +41,7 @@ def db_models():
             f'Some DB test models are not valid to migrate, check `tests/models.py`.'
             f'Errors: {error_msgs}')
 
-    return SimpleNamespace(
-        SimpleTestModel=test_models.SimpleTestModel,
-        DataFieldsModel=test_models.DataFieldsModel,
-        SimpleRelationsModel=test_models.SimpleRelationsModel,
-        FieldOptionsModel=test_models.FieldOptionsModel,
-        ChoicesModel=test_models.ChoicesModel,
-        UniqueChoiceModel=test_models.UniqueChoiceModel,
-    )
+    return SimpleNamespace(**dict(
+        [(model_class.__name__, model_class) for model_class in model_classes]
+    ))
+

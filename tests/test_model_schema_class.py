@@ -140,13 +140,13 @@ class TestModelSchemaFieldConverter:
 
         schema = TestModelSchema()
 
-        # then ... serialized data field names should match with django model fields
+        # then ... serialized data fields should match with django model fields
         model_fields = db_models.DataFieldsModel._meta.fields
         model_field_names = [f.name for f in model_fields]
         schema_field_names = list(schema.fields.keys())
         assert sorted(schema_field_names) == sorted(model_field_names)
 
-    def test_related_fields_method(self, db_models):
+    def test_generated_related_schema_fields(self, db_models):
         # given ... ModelSchema class implementation (Model has related fields)
         class TestModelSchema(ModelSchema):
             class Meta:
@@ -159,8 +159,53 @@ class TestModelSchemaFieldConverter:
         assert len(schema.related_fields.keys()) == 2
         # ... Schema ManyToManyField representation field should have `many=True`
         assert schema.related_fields['many_to_many_field'].many is True
-        # ... Schema ManyToManyField representation field should have `many=True`
+        # ... Schema ManyToManyField representation field should have `many=False`
         assert schema.related_fields['foreign_key_field'].many is False
         # ... Model Related fields should represented as `RelatedField` on schema class
         assert isinstance(schema.related_fields['many_to_many_field'], fields.RelatedField)
         assert isinstance(schema.related_fields['foreign_key_field'], fields.RelatedField)
+
+    @pytest.mark.parametrize("schema_fields_option", ['__all__', ('foreign_key_field', 'many_to_many_field')])
+    def test_generated_related_nested_fields(self, db_models, schema_fields_option):
+        # given ... ModelSchema class implementation has nested level
+        class TestModelSchema(ModelSchema):
+            class Meta:
+                model = db_models.SimpleRelationsModel
+                fields = schema_fields_option
+                level = 1
+
+        schema = TestModelSchema()
+        # then ... Schema `related_fields` method should return `2` fields
+        assert len(schema.related_fields.keys()) == 2
+        # ... Schema ManyToManyField representation field should have `many=True`
+        assert schema.related_fields['many_to_many_field'].many is True
+        # ... Schema ManyToManyField representation field should have `many=False`
+        assert schema.related_fields['foreign_key_field'].many is False
+        # ... Model Related Nested fields should represented as `RelatedNested` on schema class
+        assert isinstance(schema.related_fields['many_to_many_field'], fields.RelatedNested)
+        assert isinstance(schema.related_fields['foreign_key_field'], fields.RelatedNested)
+        # ... RelatedNested schema fields should match with django model fields
+        nested_schema = schema.related_fields['many_to_many_field'].schema
+        nested_model_fields = db_models.ManyToManyTarget._meta.fields
+        nested_model_field_names = [f.name for f in nested_model_fields]
+        nested_schema_field_names = list(nested_schema.fields.keys())
+        assert sorted(nested_schema_field_names) == sorted(nested_model_field_names)
+
+    @pytest.mark.parametrize("schema_fields_option", ['__all__', ('foreign_key_field', 'many_to_many_field')])
+    def test_second_level_generated_nested_schemas(self, db_models, schema_fields_option):
+        # given ... ModelSchema class implementation (DB model has second level nested relation)
+        class TestModelSchema(ModelSchema):
+            class Meta:
+                model = db_models.SimpleRelationsModel
+                fields = schema_fields_option
+                level = 2
+
+        schema = TestModelSchema()
+
+        # then ... ModelSchema should include second level related model fields
+        first_level_nested_schema = schema.related_fields['many_to_many_field'].schema
+        second_level_nested_schema = first_level_nested_schema.fields['second_level_relation_field'].schema
+        second_level_relation_model = db_models.ForeignKeyTarget
+        second_level_relation_model_field_names = [f.name for f in second_level_relation_model._meta.fields]
+        second_level_nested_schema_field_names = list(second_level_nested_schema.fields.keys())
+        assert sorted(second_level_relation_model_field_names) == sorted(second_level_nested_schema_field_names)

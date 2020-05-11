@@ -104,17 +104,21 @@ class UniqueChoiceModel(TestAbstractModel):
     name = models.CharField(max_length=254, unique=True, choices=CHOICES)
 
 
+class ForeignKeyTarget(TestAbstractModel):
+    name = models.CharField(max_length=100)
+
+
 class ManyToManyTarget(TestAbstractModel):
     name = models.CharField(max_length=100)
+    second_level_relation_field = models.ForeignKey(
+        ForeignKeyTarget,
+        on_delete=models.CASCADE
+    )
 
 
 class ManyToManySource(TestAbstractModel):
     name = models.CharField(max_length=100)
     targets = models.ManyToManyField(ManyToManyTarget, related_name='sources')
-
-
-class ForeignKeyTarget(TestAbstractModel):
-    name = models.CharField(max_length=100)
 
 
 class SimpleRelationsModel(TestAbstractModel):
