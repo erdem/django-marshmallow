@@ -18,6 +18,7 @@ class ModelFieldConverter:
 
     SCHEMA_FIELD_MAPPING = {
         models.AutoField: ma.fields.Integer,
+        models.UUIDField: ma.fields.UUID,
         models.BigIntegerField: ma.fields.Integer,
         models.BooleanField: ma.fields.Boolean,
         models.CharField: ma.fields.String,
@@ -74,7 +75,7 @@ class ModelFieldConverter:
         dict_cls=dict,
     ):
         opts = klass.opts
-        nested_level = opts.level
+        nested_depth = opts.depth
         model = opts.model
         fields = opts.fields
         exclude = opts.exclude
@@ -89,17 +90,18 @@ class ModelFieldConverter:
 
             relation_info = model_field_info.relations.get(field_name)
             if relation_info and not relation_info.reverse:
-                if nested_level:
+                if nested_depth:
                     model_schema_field = self.build_related_nested_field(
                         klass,
                         field_name,
-                        relation_info,
-                        nested_level
+                        model_field_info,
+                        nested_depth
                     )
                 else:
                     model_schema_field = self.build_related_field(
+                        klass,
                         field_name,
-                        relation_info
+                        model_field_info
                     )
                 field_list.append(model_schema_field)
                 continue
@@ -127,19 +129,27 @@ class ModelFieldConverter:
         field_kwargs = self.get_schema_field_kwargs(model_field)
         return field_name, InferredField(**field_kwargs)
 
-    def build_related_nested_field(self, new_class, field_name, relation_info, nested_level):
+    def build_related_nested_field(self, new_class, field_name, model_field_info, nested_depth):
+        relation_info = model_field_info.relations.get(field_name)
         class RelatedModelSerializer(new_class):
             class Meta:
                 model = relation_info.related_model
                 fields = '__all__'
-                level = nested_level - 1
+                depth = nested_depth - 1
         field_kwargs = self.get_related_field_kwargs(relation_info)
         field_class = self.related_nested_class(RelatedModelSerializer, **field_kwargs)
         return field_name, field_class
 
-    def build_related_field(self, field_name, relation_info):
+    def build_related_field(self, new_class, field_name, model_field_info):
+        relation_info = model_field_info.relations.get(field_name)
+        class RelatedFieldSerializer(new_class):
+            class Meta:
+                model = relation_info.related_model
+                fields = (relation_info.model_field.target_field.name,)
+
         field_kwargs = self.get_related_field_kwargs(relation_info)
-        return field_name, self.related_field_class(**field_kwargs)
+        field_class = self.related_field_class(RelatedFieldSerializer, **field_kwargs)
+        return field_name, field_class
 
     def get_related_field_kwargs(self, relation_info):
         model_field, related_model, to_many, to_field, has_through_model, reverse = relation_info

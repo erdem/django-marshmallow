@@ -30,7 +30,7 @@ class ModelSchemaOpts(SchemaOpts):
             self.fields = ALL_FIELDS
 
         self.model_converter = getattr(meta, 'model_converter', ModelFieldConverter)
-        self.level = getattr(meta, 'level', None)
+        self.depth = getattr(meta, 'depth', None)
         self.ordered = getattr(meta, "ordered", True)
 
 
@@ -62,10 +62,10 @@ class ModelSchemaMetaclass(SchemaMeta):
                 f'{klass.__class__.__name__} schema class needs updating.'
             )
 
-        level = opts.level
-        if level is not None:
-            assert level >= 0, f'`level` cannot be negative. {klass.__class__.__name__} schema class schema class needs updating.'
-            assert level <= 10, f'`level` cannot be greater than 10. {klass.__class__.__name__} schema class schema class needs updating.'
+        depth = opts.depth
+        if depth is not None:
+            assert depth >= 0, f'`depth` cannot be negative. {klass.__class__.__name__} schema class schema class needs updating.'
+            assert depth <= 10, f'`depth` cannot be greater than 10. {klass.__class__.__name__} schema class schema class needs updating.'
 
     @classmethod
     def get_declared_fields(mcs, klass, cls_fields, inherited_fields, dict_cls):

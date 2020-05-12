@@ -4,6 +4,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 
 import marshmallow as ma
+from marshmallow.fields import *
 
 
 class RelatedNested(ma.fields.Nested):
@@ -26,41 +27,37 @@ class RelatedNested(ma.fields.Nested):
         return self.schema.save()
 
 
-class RelatedField(ma.fields.Field):
+class RelatedField(ma.fields.Nested):
 
     default_error_messages = {
         "invalid": "Could not deserialize related value {value!r}; "
         "expected a dictionary with keys {keys!r}"
     }
 
-    def __init__(
-            self,
-            model_field,
-            related_model,
-            to_field,
-            many,
-            has_through_model,
-            is_reverse_relation,
-            **kwargs
-    ):
-        super().__init__(**kwargs)
-
-        self.model_field = model_field
-        self.related_model = related_model
-        self.to_field = to_field
-        self.many = many
-        self.has_through_model = has_through_model
-        self.is_reverse_relation = is_reverse_relation
+    def __init__(self, nested, **kwargs):
+        super().__init__(nested, **kwargs)
+        self.related_model = kwargs.get('related_model', getattr(nested.opts, 'model', None))
+        if not self.related_model:
+            raise ma.exceptions.MarshmallowError(
+                'RelatedNested needs to use with a inherited class of '
+                '"ModelSchema" or can use with a Marshmallow "Schema" class implementation along with'
+                ' `related_model` parameter.'
+            )
+        self.model_field = kwargs.get('model_field')
+        self.to_field = kwargs.get('to_field')
+        self.many = kwargs.get('many', False)
+        self.has_through_model = kwargs.get('has_through_model', False)
+        self.is_reverse_relation = kwargs.get('is_reverse_relation', False)
 
     def _serialize(self, value: typing.Any, attr: str, obj: typing.Any, **kwargs):
         if self.is_reverse_relation:  # FixMe
             return "REVERSE"
-        if self.many and isinstance(value, models.Manager):
-            value = list(value.values_list('pk', flat=True))
-        if self.many and isinstance(value, list):
-            value = [v.id for v in value if isinstance(v, self.related_model)]
-        if self.to_field:
-            value = getattr(value, self.to_field)
+        # if self.many and isinstance(value, list):
+        #     value = [v.pk for v in value if isinstance(v, self.related_model)]
+        # if self.many and isinstance(value, models.Manager):
+        #     value = list(value.values_list('pk', flat=True))
+        # if self.to_field:
+        #     value = getattr(value, self.to_field)
         return super()._serialize(value, attr, obj, **kwargs)
 
     def _deserialize(self, value: typing.Any, attr: str = None, data: typing.Mapping[str, typing.Any] = None, **kwargs):
