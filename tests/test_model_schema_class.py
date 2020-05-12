@@ -69,32 +69,32 @@ class TestModelSchemaOptions:
         assert error_msg == 'Cannot set `fields` and `exclude` options both together on model schemas.' \
                             'ModelSchemaMetaclass schema class needs updating.'
 
-    def test_schema_level_option_validation(self, db_models):
-        # given ... ModelSchema class implementation has negative `level` value
+    def test_schema_depth_option_validation(self, db_models):
+        # given ... ModelSchema class implementation has negative `depth` value
         with pytest.raises(Exception) as exc_info:
             class TestModelSchema(ModelSchema):
                 class Meta:
                     model = db_models.SimpleTestModel
                     fields = ('id', )
-                    level = -1
+                    depth = -1
 
         # then ... should raise `AssertionError` exception
         error_msg = exc_info.value.args[0]
         assert exc_info.type == AssertionError
-        assert error_msg == '`level` cannot be negative. ModelSchemaMetaclass schema class schema class needs updating.'
+        assert error_msg == '`depth` cannot be negative. ModelSchemaMetaclass schema class schema class needs updating.'
 
-        # given ... ModelSchema class implementation has greater than 10 `level` value
+        # given ... ModelSchema class implementation has greater than 10 `depth` value
         with pytest.raises(Exception) as exc_info:
             class TestModelSchema(ModelSchema):
                 class Meta:
                     model = db_models.SimpleTestModel
                     fields = ('id', )
-                    level = 11
+                    depth = 11
 
         # then ... should raise `AssertionError` exception
         error_msg = exc_info.value.args[0]
         assert exc_info.type == AssertionError
-        assert error_msg == '`level` cannot be greater than 10. ModelSchemaMetaclass schema class schema class needs updating.'
+        assert error_msg == '`depth` cannot be greater than 10. ModelSchemaMetaclass schema class schema class needs updating.'
 
     def test_schema_ordered_option_functionality(self, db_models):
         # given ... expected fields for testing django model
@@ -167,12 +167,12 @@ class TestModelSchemaFieldConverter:
 
     @pytest.mark.parametrize("schema_fields_option", ['__all__', ('foreign_key_field', 'many_to_many_field')])
     def test_generated_related_nested_fields(self, db_models, schema_fields_option):
-        # given ... ModelSchema class implementation has nested level
+        # given ... ModelSchema class implementation has nested depth
         class TestModelSchema(ModelSchema):
             class Meta:
                 model = db_models.SimpleRelationsModel
                 fields = schema_fields_option
-                level = 1
+                depth = 1
 
         schema = TestModelSchema()
         # then ... Schema `related_fields` method should return `2` fields
@@ -192,20 +192,20 @@ class TestModelSchemaFieldConverter:
         assert sorted(nested_schema_field_names) == sorted(nested_model_field_names)
 
     @pytest.mark.parametrize("schema_fields_option", ['__all__', ('foreign_key_field', 'many_to_many_field')])
-    def test_second_level_generated_nested_schemas(self, db_models, schema_fields_option):
-        # given ... ModelSchema class implementation (DB model has second level nested relation)
+    def test_second_depth_generated_nested_schemas(self, db_models, schema_fields_option):
+        # given ... ModelSchema class implementation (DB model has second depth nested relation)
         class TestModelSchema(ModelSchema):
             class Meta:
                 model = db_models.SimpleRelationsModel
                 fields = schema_fields_option
-                level = 2
+                depth = 2
 
         schema = TestModelSchema()
 
-        # then ... ModelSchema should include second level related model fields
-        first_level_nested_schema = schema.related_fields['many_to_many_field'].schema
-        second_level_nested_schema = first_level_nested_schema.fields['second_level_relation_field'].schema
-        second_level_relation_model = db_models.ForeignKeyTarget
-        second_level_relation_model_field_names = [f.name for f in second_level_relation_model._meta.fields]
-        second_level_nested_schema_field_names = list(second_level_nested_schema.fields.keys())
-        assert sorted(second_level_relation_model_field_names) == sorted(second_level_nested_schema_field_names)
+        # then ... ModelSchema should include second depth related model fields
+        first_depth_nested_schema = schema.related_fields['many_to_many_field'].schema
+        second_depth_nested_schema = first_depth_nested_schema.fields['second_depth_relation_field'].schema
+        second_depth_relation_model = db_models.ForeignKeyTarget
+        second_depth_relation_model_field_names = [f.name for f in second_depth_relation_model._meta.fields]
+        second_depth_nested_schema_field_names = list(second_depth_nested_schema.fields.keys())
+        assert sorted(second_depth_relation_model_field_names) == sorted(second_depth_nested_schema_field_names)

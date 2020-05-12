@@ -37,9 +37,10 @@ def db_models():
     migrations_validation_erros = [m.check() for m in model_classes]
     if any(migrations_validation_erros):
         error_msgs = [str(erros) for erros in migrations_validation_erros if erros]
-        pytest.exit(
+        pytest.fail(
             f'Some DB test models are not valid to migrate, check `tests/models.py`.'
-            f'Errors: {error_msgs}')
+            f'Errors: {error_msgs}'
+        )
 
     return SimpleNamespace(**dict(
         [(model_class.__name__, model_class) for model_class in model_classes]

@@ -75,6 +75,54 @@ DECIMAL_CHOICES = (
 )
 
 
+class ForeignKeyTarget(TestAbstractModel):
+    name = models.CharField(max_length=255)
+
+
+class ManyToManyTarget(TestAbstractModel):
+    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    name = models.CharField(max_length=255)
+    second_depth_relation_field = models.ForeignKey(
+        ForeignKeyTarget,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
+
+
+class ManyToManySource(TestAbstractModel):
+    name = models.CharField(max_length=255)
+    targets = models.ManyToManyField(ManyToManyTarget, related_name='sources')
+
+
+class SimpleRelationsModel(TestAbstractModel):
+    many_to_many_field = models.ManyToManyField(ManyToManyTarget)
+    foreign_key_field = models.ForeignKey(
+        ForeignKeyTarget,
+        on_delete=models.CASCADE,
+    )
+
+
+class OneToOneTarget(TestAbstractModel):
+    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    name = models.CharField(max_length=255)
+
+
+class AllRelatedFieldsModel(TestAbstractModel):
+    name = models.CharField(max_length=255)
+    foreign_key_field = models.ForeignKey(
+        ForeignKeyTarget,
+        on_delete=models.CASCADE
+    )
+    many_to_many_field = models.ManyToManyField(
+        ManyToManyTarget,
+    )
+    one_to_one_field = models.OneToOneField(
+        OneToOneTarget,
+        on_delete=models.CASCADE
+    )
+
+
 class FieldOptionsModel(TestAbstractModel):
     value_limit_field = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(10)])
     length_limit_field = models.CharField(validators=[MinLengthValidator(3)], max_length=12)
@@ -104,29 +152,6 @@ class UniqueChoiceModel(TestAbstractModel):
     name = models.CharField(max_length=254, unique=True, choices=CHOICES)
 
 
-class ForeignKeyTarget(TestAbstractModel):
-    name = models.CharField(max_length=100)
-
-
-class ManyToManyTarget(TestAbstractModel):
-    name = models.CharField(max_length=100)
-    second_level_relation_field = models.ForeignKey(
-        ForeignKeyTarget,
-        on_delete=models.CASCADE
-    )
-
-
-class ManyToManySource(TestAbstractModel):
-    name = models.CharField(max_length=100)
-    targets = models.ManyToManyField(ManyToManyTarget, related_name='sources')
-
-
-class SimpleRelationsModel(TestAbstractModel):
-    many_to_many_field = models.ManyToManyField(ManyToManyTarget)
-    foreign_key_field = models.ForeignKey(
-        ForeignKeyTarget,
-        on_delete=models.CASCADE
-    )
 
 
 class UUIDForeignKeyTarget(TestAbstractModel):
@@ -206,27 +231,27 @@ class NestedForeignKeySource(TestAbstractModel):
 
 
 # OneToOne
-class OneToOneTarget(TestAbstractModel):
-    name = models.CharField(max_length=100)
-
-
-class NullableOneToOneSource(TestAbstractModel):
-    name = models.CharField(max_length=100)
-    target = models.OneToOneField(
-        OneToOneTarget,
-        null=True,
-        blank=True,
-        related_name='nullable_source',
-        on_delete=models.CASCADE
-    )
-
-
-class OneToOnePKSource(TestAbstractModel):
-    """ Test model where the primary key is a OneToOneField with another model. """
-    name = models.CharField(max_length=100)
-    target = models.OneToOneField(
-        OneToOneTarget,
-        primary_key=True,
-        related_name='required_source',
-        on_delete=models.CASCADE
-    )
+# class OneToOneTarget(TestAbstractModel):
+#     name = models.CharField(max_length=100)
+#
+#
+# class NullableOneToOneSource(TestAbstractModel):
+#     name = models.CharField(max_length=100)
+#     target = models.OneToOneField(
+#         OneToOneTarget,
+#         null=True,
+#         blank=True,
+#         related_name='nullable_source',
+#         on_delete=models.CASCADE
+#     )
+#
+#
+# class OneToOnePKSource(TestAbstractModel):
+#     """ Test model where the primary key is a OneToOneField with another model. """
+#     name = models.CharField(max_length=100)
+#     target = models.OneToOneField(
+#         OneToOneTarget,
+#         primary_key=True,
+#         related_name='required_source',
+#         on_delete=models.CASCADE
+#     )
