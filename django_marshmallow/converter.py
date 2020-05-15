@@ -6,7 +6,7 @@ from django.utils.text import capfirst
 import marshmallow as ma
 from marshmallow import validate
 
-from django_marshmallow.fields import InferredField, RelatedField, RelatedNested, ImageField, FileField
+from django_marshmallow import fields
 from django_marshmallow.utils import get_field_info
 
 
@@ -18,19 +18,23 @@ class ModelFieldConverter:
 
     SCHEMA_FIELD_MAPPING = {
         models.AutoField: ma.fields.Integer,
-        models.UUIDField: ma.fields.UUID,
+        models.BigAutoField: ma.fields.Integer,
         models.BigIntegerField: ma.fields.Integer,
+        models.BinaryField: fields.BinaryField,
         models.BooleanField: ma.fields.Boolean,
         models.CharField: ma.fields.String,
-        models.CommaSeparatedIntegerField: ma.fields.String,
+        models.CommaSeparatedIntegerField: fields.CommaSeparatedIntegerField,
         models.DateField: ma.fields.Date,
         models.DateTimeField: ma.fields.DateTime,
         models.DecimalField: ma.fields.Decimal,
+        models.DurationField: ma.fields.TimeDelta,
         models.EmailField: ma.fields.Email,
-        models.Field: ma.fields.Inferred,
-        models.FileField: FileField,
+        models.FilePathField: fields.FilePathField,
+        models.FileField: fields.FileField,
         models.FloatField: ma.fields.Float,
-        models.ImageField: ImageField,
+        models.GenericIPAddressField: fields.GenericIPAddressField,
+        models.IPAddressField: fields.IPAddressField,
+        models.ImageField: fields.ImageField,
         models.IntegerField: ma.fields.Integer,
         models.NullBooleanField: ma.fields.Boolean,
         models.PositiveIntegerField: ma.fields.Integer,
@@ -38,16 +42,13 @@ class ModelFieldConverter:
         models.SlugField: ma.fields.String,
         models.SmallIntegerField: ma.fields.Integer,
         models.TextField: ma.fields.String,
-        models.TimeField: InferredField,
+        models.TimeField: ma.fields.Time,
         models.URLField: ma.fields.URL,
-        models.IPAddressField: ma.fields.Inferred,
-        models.GenericIPAddressField: ma.fields.Inferred,
-        models.FilePathField: ma.fields.String,
-        models.DurationField: ma.fields.TimeDelta,
+        models.UUIDField: ma.fields.UUID,
     }
 
-    related_field_class = RelatedField
-    related_nested_class = RelatedNested
+    related_field_class = fields.RelatedField
+    related_nested_class = fields.RelatedNested
 
     def __init__(self, schema_cls=None):
         self.schema_cls = schema_cls

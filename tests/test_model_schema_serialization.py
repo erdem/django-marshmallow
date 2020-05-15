@@ -2,6 +2,7 @@ import os
 import tempfile
 from datetime import datetime
 from decimal import Decimal
+from collections import OrderedDict
 
 import pytest
 from django.core.files import File
@@ -122,6 +123,9 @@ def related_model_obj(db, db_models):
 
 
 def test_schema_serialization_with_related_fields(db_models, related_model_obj):
+    """
+        Related fields primary keys should return right data types
+    """
     class TestSchema(ModelSchema):
         class Meta:
             model = db_models.AllRelatedFieldsModel
@@ -129,7 +133,15 @@ def test_schema_serialization_with_related_fields(db_models, related_model_obj):
 
     schema = TestSchema()
     data = schema.dump(related_model_obj)
-    assert 'id' in data
+
+    assert data['name'] == related_model_obj.name
+    assert isinstance(data['foreign_key_field'], OrderedDict) is True
+    assert isinstance(data['one_to_one_field'], OrderedDict) is True
+    assert isinstance(data['many_to_many_field'], list) is True
+
+    assert data['foreign_key_field']['id'] == related_model_obj.foreign_key_field.id
+    assert data['one_to_one_field']['uuid'] == str(related_model_obj.one_to_one_field.uuid)
+    assert data['many_to_many_field'][0]['uuid'] == str(related_model_obj.many_to_many_field.all().first().uuid)
 
 
 def test_schema_serialization_with_nested_declared_fields(db_models):

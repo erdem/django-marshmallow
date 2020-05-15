@@ -8,6 +8,20 @@ from django.core.validators import MinValueValidator, MinLengthValidator, MaxVal
 from django.db import models
 
 
+
+__all__ = [
+    'AutoField', 'BLANK_CHOICE_DASH', 'BigAutoField', 'BigIntegerField',
+    'BinaryField', 'BooleanField', 'CharField', 'CommaSeparatedIntegerField',
+    'DateField', 'DateTimeField', 'DecimalField', 'DurationField',
+    'EmailField', 'Empty', 'Field', 'FieldDoesNotExist', 'FilePathField',
+    'FloatField', 'GenericIPAddressField', 'IPAddressField', 'IntegerField',
+    'NOT_PROVIDED', 'NullBooleanField', 'PositiveIntegerField',
+    'PositiveSmallIntegerField', 'SlugField', 'SmallIntegerField', 'TextField',
+    'TimeField', 'URLField', 'UUIDField',
+]
+
+
+
 class CustomField(models.CharField):
     """
     A custom model field simply for testing purposes.

@@ -93,3 +93,26 @@ class FileField(InferredField):
 class ImageField(InferredField):
     pass
 
+
+class BinaryField(InferredField):
+    pass
+
+
+class CommaSeparatedIntegerField(InferredField):
+    pass
+
+
+class FilePathField(InferredField):
+    pass
+
+
+class GenericIPAddressField(InferredField):
+    pass
+
+
+class IPAddressField(InferredField):
+    pass
+
+
+class SlugField(InferredField):
+    pass
