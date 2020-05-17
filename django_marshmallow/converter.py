@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 from django.db import models
 from django.utils.text import capfirst
 
@@ -64,43 +62,47 @@ class ModelFieldConverter:
         return model_field.__class__ in self.SCHEMA_FIELD_MAPPING
 
     def fields_for_model(
-        self,
-        model,  # fixme there are too many paramaters here
-        klass,
-        *,
-        include_fk=False,
-        include_relationships=False,
-        fields=None,
-        exclude=None,
-        base_fields=None,
-        dict_cls=dict,
+            self,
+            opts,
+            dict_cls
     ):
-        opts = klass.opts
-        nested_depth = opts.depth
         model = opts.model
         fields = opts.fields
         exclude = opts.exclude
+        include_pk = opts.include_pk
+        nested_depth = opts.depth
+
         model_field_info = get_field_info(model)
         field_list = []
 
+        if include_pk:
+            pk_field = self.build_primary_key_field(
+                field_name=self.schema_cls.model_pk_field.name,
+                model_field=self.schema_cls.model_pk_field
+            )
+            field_list.append(pk_field)
         for field_name, model_field in model_field_info.all_fields.items():
+
             if fields is not None and field_name not in fields:
                 continue
+
             if exclude and field_name in exclude:
+                continue
+
+            if field_name == self.schema_cls.model_pk_field.name:
                 continue
 
             relation_info = model_field_info.relations.get(field_name)
             if relation_info and not relation_info.reverse:
                 if nested_depth:
                     model_schema_field = self.build_related_nested_field(
-                        klass,
+                        self.schema_cls,
                         field_name,
                         model_field_info,
                         nested_depth
                     )
                 else:
                     model_schema_field = self.build_related_field(
-                        klass,
                         field_name,
                         model_field_info
                     )
@@ -116,9 +118,14 @@ class ModelFieldConverter:
                 model_schema_field = self.build_inferred_field(field_name, model_field)
             field_list.append(model_schema_field)
 
-        return OrderedDict(field_list)
+        return dict_cls(field_list)
 
     def build_standard_field(self, field_name, model_field):
+        field_class = self.SCHEMA_FIELD_MAPPING.get(model_field.__class__)
+        field_kwargs = self.get_schema_field_kwargs(model_field)
+        return field_name, field_class(**field_kwargs)
+
+    def build_primary_key_field(self, field_name, model_field):
         field_class = self.SCHEMA_FIELD_MAPPING.get(model_field.__class__)
         field_kwargs = self.get_schema_field_kwargs(model_field)
         return field_name, field_class(**field_kwargs)
@@ -128,7 +135,7 @@ class ModelFieldConverter:
         Return a `InferredField` for third party or custom model fields
         """
         field_kwargs = self.get_schema_field_kwargs(model_field)
-        return field_name, InferredField(**field_kwargs)
+        return field_name, fields.InferredField(**field_kwargs)
 
     def build_related_nested_field(self, new_class, field_name, model_field_info, nested_depth):
         relation_info = model_field_info.relations.get(field_name)
@@ -141,15 +148,10 @@ class ModelFieldConverter:
         field_class = self.related_nested_class(RelatedModelSerializer, **field_kwargs)
         return field_name, field_class
 
-    def build_related_field(self, new_class, field_name, model_field_info):
+    def build_related_field(self, field_name, model_field_info):
         relation_info = model_field_info.relations.get(field_name)
-        class RelatedFieldSerializer(new_class):
-            class Meta:
-                model = relation_info.related_model
-                fields = (relation_info.model_field.target_field.name,)
-
         field_kwargs = self.get_related_field_kwargs(relation_info)
-        field_class = self.related_field_class(RelatedFieldSerializer, **field_kwargs)
+        field_class = self.related_field_class(**field_kwargs)
         return field_name, field_class
 
     def get_related_field_kwargs(self, relation_info):
@@ -178,6 +180,7 @@ class ModelFieldConverter:
         field_kwargs['to_field'] = to_field
         field_kwargs['has_through_model'] = has_through_model
         field_kwargs['is_reverse_relation'] = reverse
+        field_kwargs['relation_info'] = relation_info
         return field_kwargs
 
     def get_schema_field_kwargs(self, model_field):
