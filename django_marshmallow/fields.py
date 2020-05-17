@@ -1,7 +1,6 @@
 import typing
 
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import models
 
 import marshmallow as ma
 from marshmallow.fields import *
@@ -29,14 +28,24 @@ class RelatedNested(ma.fields.Nested):
 
 class RelatedField(ma.fields.Nested):
 
-    default_error_messages = {
+    default_error_messages = {  # todo update error messages
         "invalid": "Could not deserialize related value {value!r}; "
         "expected a dictionary with keys {keys!r}"
     }
 
-    def __init__(self, nested, **kwargs):
+    def __init__(self, nested=None, relation_info=None, **kwargs):
+        from django_marshmallow.schemas import ModelSchema
+
+        if not nested:
+            class NestedSerializer(ModelSchema):  # fixMe use `model_schema_factory` method
+                class Meta:
+                    model = relation_info.related_model
+                    include_pk = True
+            nested = NestedSerializer
+
         super().__init__(nested, **kwargs)
         self.related_model = kwargs.get('related_model', getattr(nested.opts, 'model', None))
+
         if not self.related_model:
             raise ma.exceptions.MarshmallowError(
                 'RelatedNested needs to use with a inherited class of '
@@ -77,6 +86,48 @@ class RelatedField(ma.fields.Nested):
             except ObjectDoesNotExist:
                 self.make_error('invalid', value=value)
         return super()._deserialize(value, attr, data, **kwargs)
+
+
+class RelatedPKField(ma.fields.Field):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.model_field = kwargs.get('model_field')
+        self.to_field = kwargs.get('to_field')
+        self.many = kwargs.get('many', False)
+        self.has_through_model = kwargs.get('has_through_model', False)
+        self.is_reverse_relation = kwargs.get('is_reverse_relation', False)
+
+    def _serialize(self, value, attr, obj, **kwargs):
+        field_cls = self.root.TYPE_MAPPING.get(type(value))
+        if field_cls is None:
+            field = super()
+        else:
+            field = self._field_cache.get(field_cls)
+            if field is None:
+                field = field_cls()
+                field._bind_to_schema(self.name, self.parent)
+                self._field_cache[field_cls] = field
+        return field._serialize(value, attr, obj, **kwargs)
+
+    def _deserialize(self, value: typing.Any, attr: str = None, data: typing.Mapping[str, typing.Any] = None, **kwargs):
+        if self.is_reverse_relation:  # FixMe
+            return "REVERSE"
+        if self.many and isinstance(value, list):
+            data = []
+            for pk in value:
+                try:
+                    data.append(self.related_model._default_manager.get(pk=pk))
+                except ObjectDoesNotExist:
+                    self.make_error('invalid', value=value)
+            return data
+        if self.to_field:
+            try:
+                return self.related_model._default_manager.get(pk=value)
+            except ObjectDoesNotExist:
+                self.make_error('invalid', value=value)
+        return super()._deserialize(value, attr, data, **kwargs)
+
 
 
 class InferredField(ma.fields.Inferred):

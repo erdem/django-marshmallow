@@ -31,10 +31,20 @@ class ModelSchemaOpts(SchemaOpts):
 
         self.model_converter = getattr(meta, 'model_converter', ModelFieldConverter)
         self.depth = getattr(meta, 'depth', None)
-        self.ordered = getattr(meta, "ordered", True)
+        self.ordered = getattr(meta, 'ordered', True)
+        self.include_pk = getattr(meta, 'include_pk', False)
 
 
 class ModelSchemaMetaclass(SchemaMeta):
+
+    def __new__(mcs, name, bases, attrs):
+        klass = super().__new__(mcs, name, bases, attrs)
+        _pk_field = None
+        if klass._declared_fields:
+            model_pk_field_name = klass.opts.model._meta.pk.name
+            _pk_field = klass._declared_fields.get(model_pk_field_name)
+        klass._pk_field = _pk_field
+        return klass
 
     @classmethod
     def validate_schema_option_class(mcs, klass):
@@ -42,6 +52,7 @@ class ModelSchemaMetaclass(SchemaMeta):
         fields = opts.fields
         exclude = opts.exclude
         model = opts.model
+        include_pk = opts.include_pk
 
         if not model:
             raise ImproperlyConfigured(
@@ -49,11 +60,21 @@ class ModelSchemaMetaclass(SchemaMeta):
                 'schema class needs updating.' % klass.__name__
             )
 
-        if not fields and not exclude:
+        if not issubclass(model, models.Model):
             raise ImproperlyConfigured(
-                'Creating a ModelSchema without either `Meta.fields` attribute '
-                'or `Meta.exclude` attribute is prohibited; %s '
+                '`model` option must be a Django model class'
+            )
+
+        if not fields and not exclude and not include_pk:
+            raise ImproperlyConfigured(
+                'Creating a ModelSchema without `Meta.fields` attribute '
+                'or `Meta.exclude` or `Meta.include_pk` attribute is prohibited; %s '
                 'schema class needs updating.' % klass.__name__
+            )
+
+        if not isinstance(include_pk, bool):
+            raise ValueError(
+                '`include_pk` option must be a boolean.'
             )
 
         if fields and exclude:
@@ -67,21 +88,24 @@ class ModelSchemaMetaclass(SchemaMeta):
             assert depth >= 0, f'`depth` cannot be negative. {klass.__class__.__name__} schema class schema class needs updating.'
             assert depth <= 10, f'`depth` cannot be greater than 10. {klass.__class__.__name__} schema class schema class needs updating.'
 
+    @property
+    def model_pk_field(mcs):
+        return mcs.opts.model._meta.pk
+
     @classmethod
     def get_declared_fields(mcs, klass, cls_fields, inherited_fields, dict_cls):
         """
-        Updates declared fields with fields converted from the django model
-        passed as the `model` on Meta options.
+        Overridden for updates declared schema fields with fields converted from the django model.
         """
 
-        # avoid to declare fields for base structure classes
+        # no needs to declare fields for base structure classes
         if klass.__name__ in ('BaseModelSchema', 'ModelSchema'):
             return super().get_declared_fields(klass, cls_fields, inherited_fields, dict_cls)
 
         mcs.validate_schema_option_class(klass)
         opts = klass.opts
         if opts.fields == ALL_FIELDS:
-            # Sentinel for fields_for_model to indicate "get the list of
+            # Sentinel for `fields_for_model` to indicate "get the list of
             # fields from the model"
             opts.fields = None
         Converter=opts.model_converter
@@ -89,19 +113,19 @@ class ModelSchemaMetaclass(SchemaMeta):
         declared_fields = super().get_declared_fields(
             klass, cls_fields, inherited_fields, dict_cls
         )
-        fields = mcs.get_fields(converter, klass, opts, declared_fields, dict_cls)
+        fields = mcs.get_fields(converter, klass, opts, dict_cls)
         fields.update(declared_fields)
         return fields
 
     @classmethod
-    def get_fields(mcs, converter, klass, opts, base_fields, dict_cls):
+    def get_fields(mcs, converter, klass, opts, dict_cls):
+        """
+        Returns converted schema fields for the django model
+        """
+
         if opts.model is not None:
             return converter.fields_for_model(
-                opts.model,
-                klass,
-                fields=opts.fields,
-                exclude=opts.exclude,
-                base_fields=base_fields,
+                opts=opts,
                 dict_cls=dict_cls,
             )
         return dict_cls()
@@ -113,6 +137,11 @@ class BaseModelSchema(Schema, metaclass=ModelSchemaMetaclass):
     @cached_property
     def model_class(self):
         return self.opts.model
+
+    @cached_property
+    def pk_field(self):
+        if self.opts.include_pk:
+            return self._pk_field
 
     def get_fields(self):
         return copy.deepcopy(self._declared_fields)
@@ -128,10 +157,6 @@ class BaseModelSchema(Schema, metaclass=ModelSchemaMetaclass):
             if isinstance(field, (RelatedField, RelatedNested)):
                 related_fields.append((field_name, field))
         return OrderedDict(related_fields)
-
-    @cached_property
-    def pk_field(self):
-        return self.opts.pk_field
 
     def _serialize(self, obj, many=False, *args, **kwargs):
         if many and isinstance(obj, models.Manager):
