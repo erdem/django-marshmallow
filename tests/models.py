@@ -46,7 +46,7 @@ class DataFieldsModel(TestAbstractModel):
     """
     A model class for testing data fields (non-related fields).
     """
-    auto_field = models.AutoField(primary_key=True)
+    # auto_field = models.AutoField(primary_key=True)
     big_integer_field = models.BigIntegerField()
     boolean_field = models.BooleanField(default=False)
     char_field = models.CharField(max_length=255)

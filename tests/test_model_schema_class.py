@@ -18,6 +18,15 @@ class TestModelSchemaOptions:
         assert error_msg == 'Creating a ModelSchema without `Meta.model` attribute is prohibited; ' \
                             'TestModelSchema schema class needs updating.'
 
+        with pytest.raises(Exception) as exc_info:
+            class TestModelSchema(ModelSchema):
+                class Meta:
+                    model = object()
+
+        assert exc_info.type == ImproperlyConfigured
+        error_msg = exc_info.value.args[0]
+        assert error_msg == '`model` option must be a Django model class'
+
     def test_schema_fields_and_exclude_options_validation(self, db_models):
         with pytest.raises(Exception) as exc_info:
             class TestModelSchema(ModelSchema):
@@ -26,8 +35,8 @@ class TestModelSchemaOptions:
 
         assert exc_info.type == ImproperlyConfigured
         error_msg = exc_info.value.args[0]
-        assert error_msg == 'Creating a ModelSchema without either `Meta.fields` attribute or `Meta.exclude`' \
-                            ' attribute is prohibited; TestModelSchema schema class needs updating.'
+        assert error_msg == 'Creating a ModelSchema without `Meta.fields` attribute or `Meta.exclude` ' \
+                            'or `Meta.include_pk` attribute is prohibited; TestModelSchema schema class needs updating.'
 
         with pytest.raises(Exception) as exc_info:
             class TestModelSchema(ModelSchema):
@@ -81,6 +90,18 @@ class TestModelSchemaOptions:
         error_msg = exc_info.value.args[0]
         assert exc_info.type == AssertionError
         assert error_msg == '`depth` cannot be greater than 10. ModelSchemaMetaclass schema class schema class needs updating.'
+
+    def test_schema_include_pk_option_validation(self, db_models):
+        with pytest.raises(Exception) as exc_info:
+            class TestModelSchema(ModelSchema):
+                class Meta:
+                    model = db_models.SimpleTestModel
+                    fields = ('name', )
+                    include_pk = None
+
+        error_msg = exc_info.value.args[0]
+        assert exc_info.type == ValueError
+        assert error_msg == '`include_pk` option must be a boolean.'
 
     def test_schema_ordered_option_functionality(self, db_models):
         expected_fields = ('id', 'name', 'text', 'published_date', 'created_at')
@@ -137,6 +158,35 @@ class TestModelSchemaFieldConverter:
         assert isinstance(schema.related_fields['many_to_many_field'], fields.RelatedField)
         assert isinstance(schema.related_fields['foreign_key_field'], fields.RelatedField)
 
+    def test_related_fields_data_types(self, db_models):
+        """
+            Related fields primary keys should be generated right schema fields
+        """
+
+        class TestModelSchema(ModelSchema):
+            """
+                Implements a schema has different type of related fields
+            """
+
+            class Meta:
+                model = db_models.AllRelatedFieldsModel
+                fields = ('foreign_key_field', 'many_to_many_field')
+
+        schema = TestModelSchema()
+        schema_foreign_key_field = schema.fields['foreign_key_field']
+        foreign_key_related_schema = schema_foreign_key_field.schema
+        fk_related_pk_field = foreign_key_related_schema.pk_field
+
+        # ForeignKeyTarget model related schema should have integer primary key field
+        assert isinstance(fk_related_pk_field, fields.Integer) is True
+
+        schema_many_to_many_field = schema.fields['many_to_many_field']
+        many_to_many_related_schema = schema_many_to_many_field.schema
+        m2m_related_pk_field = many_to_many_related_schema.pk_field
+
+        # ManyToManyTarget model related schema should have UUID primary key field
+        assert isinstance(m2m_related_pk_field, fields.UUID) is True
+
     @pytest.mark.parametrize("schema_fields_option", ['__all__', ('foreign_key_field', 'many_to_many_field')])
     def test_generated_related_nested_fields(self, db_models, schema_fields_option):
         class TestModelSchema(ModelSchema):
@@ -173,23 +223,3 @@ class TestModelSchemaFieldConverter:
         second_depth_relation_model_field_names = [f.name for f in second_depth_relation_model._meta.fields]
         second_depth_nested_schema_field_names = list(second_depth_nested_schema.fields.keys())
         assert sorted(second_depth_relation_model_field_names) == sorted(second_depth_nested_schema_field_names)
-
-    def test_related_fields_data_types(self, db_models):
-        """
-            Related fields primary keys should be generated right schema fields
-        """
-
-        class TestModelSchema(ModelSchema):
-            """
-                Implements a schema has different type of related fields
-            """
-
-            class Meta:
-                model = db_models.AllRelatedFieldsModel
-                fields = ('foreign_key_field', 'many_to_many_field')
-
-        schema = TestModelSchema()
-        schema_foreign_key_field = schema.fields['foreign_key_field']
-        foreign_key_related_schema = schema_foreign_key_field.schema
-        schema_many_to_many_field = schema.fields['many_to_many_field']
-        many_to_many_related_schema = schema.fields['many_to_many_field']
