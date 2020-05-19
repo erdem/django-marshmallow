@@ -91,7 +91,7 @@ def test_schema_serialization_with_declared_fields(db_models, data_model_obj):
 
 
 @pytest.fixture
-def related_model_obj(db, db_models):
+def all_related_obj(db, db_models):
     one_to_one_instance = db_models.OneToOneTarget(
         name='One to One'
     )
@@ -123,7 +123,7 @@ def related_model_obj(db, db_models):
     return all_related_obj
 
 
-def test_schema_serialization_with_related_fields(db_models, related_model_obj):
+def test_schema_serialization_with_related_fields(db_models, all_related_obj):
     """
         Related fields primary keys should return right data types
     """
@@ -133,16 +133,16 @@ def test_schema_serialization_with_related_fields(db_models, related_model_obj):
             fields = '__all__'
 
     schema = TestSchema()
-    data = schema.dump(related_model_obj)
+    data = schema.dump(all_related_obj)
 
-    assert data['name'] == related_model_obj.name
+    assert data['name'] == all_related_obj.name
     assert isinstance(data['foreign_key_field'], OrderedDict) is True
     assert isinstance(data['one_to_one_field'], OrderedDict) is True
     assert isinstance(data['many_to_many_field'], list) is True
 
-    assert data['foreign_key_field']['id'] == related_model_obj.foreign_key_field.id
-    assert data['one_to_one_field']['uuid'] == str(related_model_obj.one_to_one_field.uuid)
-    assert data['many_to_many_field'][0]['uuid'] == str(related_model_obj.many_to_many_field.all().first().uuid)
+    assert data['foreign_key_field']['id'] == all_related_obj.foreign_key_field.id
+    assert data['one_to_one_field']['uuid'] == str(all_related_obj.one_to_one_field.uuid)
+    assert data['many_to_many_field'][0]['uuid'] == str(all_related_obj.many_to_many_field.all().first().uuid)
 
 
 def test_schema_serialization_with_nested_declared_fields(db_models):
