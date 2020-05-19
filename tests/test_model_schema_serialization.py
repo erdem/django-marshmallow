@@ -50,6 +50,7 @@ def test_schema_serialization_with_all_fields_option(db_models, data_model_obj):
         class Meta:
             model = db_models.DataFieldsModel
             fields = '__all__'
+            include_pk = True
 
     schema = TestSchema()
     data = schema.dump(data_model_obj)
@@ -146,3 +147,4 @@ def test_schema_serialization_with_related_fields(db_models, related_model_obj):
 
 def test_schema_serialization_with_nested_declared_fields(db_models):
     pass
+

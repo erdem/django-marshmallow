@@ -32,7 +32,8 @@ class ModelSchemaOpts(SchemaOpts):
         self.model_converter = getattr(meta, 'model_converter', ModelFieldConverter)
         self.depth = getattr(meta, 'depth', None)
         self.ordered = getattr(meta, 'ordered', True)
-        self.include_pk = getattr(meta, 'include_pk', False)
+        self.include_pk = getattr(meta, 'include_pk', True)
+        self._related_field_nested = getattr(meta, '_related_field_nested', False)
 
 
 class ModelSchemaMetaclass(SchemaMeta):
@@ -53,6 +54,7 @@ class ModelSchemaMetaclass(SchemaMeta):
         exclude = opts.exclude
         model = opts.model
         include_pk = opts.include_pk
+        _related_field_nested = opts._related_field_nested
 
         if not model:
             raise ImproperlyConfigured(
@@ -60,15 +62,15 @@ class ModelSchemaMetaclass(SchemaMeta):
                 'schema class needs updating.' % klass.__name__
             )
 
-        if not issubclass(model, models.Model):
+        if not isinstance(model, type) or not issubclass(model, models.Model):
             raise ImproperlyConfigured(
                 '`model` option must be a Django model class'
             )
 
-        if not fields and not exclude and not include_pk:
+        if not fields and not exclude and not _related_field_nested:
             raise ImproperlyConfigured(
-                'Creating a ModelSchema without `Meta.fields` attribute '
-                'or `Meta.exclude` or `Meta.include_pk` attribute is prohibited; %s '
+                'Creating a ModelSchema without either `Meta.fields` attribute '
+                'or `Meta.exclude` attribute is prohibited; %s '
                 'schema class needs updating.' % klass.__name__
             )
 

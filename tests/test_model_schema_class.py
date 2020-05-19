@@ -35,8 +35,8 @@ class TestModelSchemaOptions:
 
         assert exc_info.type == ImproperlyConfigured
         error_msg = exc_info.value.args[0]
-        assert error_msg == 'Creating a ModelSchema without `Meta.fields` attribute or `Meta.exclude` ' \
-                            'or `Meta.include_pk` attribute is prohibited; TestModelSchema schema class needs updating.'
+        assert error_msg == 'Creating a ModelSchema without either `Meta.fields` attribute or `Meta.exclude`' \
+                            ' attribute is prohibited; TestModelSchema schema class needs updating.'
 
         with pytest.raises(Exception) as exc_info:
             class TestModelSchema(ModelSchema):
