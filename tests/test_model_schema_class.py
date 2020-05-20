@@ -187,7 +187,7 @@ class TestModelSchemaFieldConverter:
         # ManyToManyTarget model related schema should have UUID primary key field
         assert isinstance(m2m_related_pk_field, fields.UUID) is True
 
-    @pytest.mark.parametrize("schema_fields_option", ['__all__', ('foreign_key_field', 'many_to_many_field')])
+    @pytest.mark.parametrize('schema_fields_option', ['__all__', ('foreign_key_field', 'many_to_many_field')])
     def test_generated_related_nested_fields(self, db_models, schema_fields_option):
         class TestModelSchema(ModelSchema):
             class Meta:

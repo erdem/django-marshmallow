@@ -59,17 +59,11 @@ def test_deserialization_related_primary_key_fields(
 
     load_data = {
         'name': 'Deserialized Instance',
-        'foreign_key_field': fk_related_instance.id,
-        'one_to_one_field': o2o_related_instance.uuid,
-        'many_to_many_field': [m2m_related_instance.uuid]
+        'one_to_one_field': {'uuid': o2o_related_instance.uuid},
+        'foreign_key_field': "test",
+        'many_to_many_field': [{'uuid': m2m_related_instance.uuid}]
     }
 
-    validated_data = schema.load(load_data)
-    instance = schema.save(validated_data)
+    validated_data = schema.validate(load_data)
 
     entity = db_models.AllRelatedFieldsModel.objects.first()
-    assert db_models.AllRelatedFieldsModel.objects.count() == 1
-    assert instance.name == entity.name
-    assert instance.foreign_key_field.id == entity.foreign_key_field.id
-    assert instance.many_to_many_field.first().uuid == entity.many_to_many_field.first().uuid
-    assert instance.one_to_one_field.uuid == entity.one_to_one_field.uuid

@@ -189,10 +189,18 @@ class ModelFieldConverter:
         validator_kwarg = list(model_field.validators)
         kwargs['model_field'] = model_field
 
-        if model_field.primary_key and not model_field.editable:
-            kwargs['dump_only'] = True
+        if model_field.primary_key:
+            kwargs['required'] = False
+            return kwargs
 
-        kwargs['required'] = model_field.has_default() or model_field.blank or model_field.null
+        if not model_field.blank or not model_field.null:
+            kwargs['required'] = True  # required=False for all fields by default on marshmallow
+        if model_field.null:
+            kwargs['allow_none'] = True
+        if model_field.validators:
+            kwargs['validate'] = model_field.validators
+        if not model_field.editable:
+            kwargs['dump_only'] = True
 
         if model_field.verbose_name:
             metadata['label'] = capfirst(model_field.verbose_name)

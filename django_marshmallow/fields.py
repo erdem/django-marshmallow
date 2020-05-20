@@ -145,28 +145,33 @@ class RelatedField(ma.fields.Nested):
             )
 
         self.model_field = kwargs.get('model_field')
-        self.to_field = kwargs.get('to_field')
+        self.to_field = relation_info.to_field
         self.many = kwargs.get('many', False)
-        self.has_through_model = kwargs.get('has_through_model', False)
+        self.relation_info = relation_info
         self.is_reverse_relation = kwargs.get('is_reverse_relation', False)
 
+    def _validate(self, value):
+        return super()._validate(value)
+
     def _deserialize(self, value: typing.Any, attr: str = None, data: typing.Mapping[str, typing.Any] = None, **kwargs):
+        cc = super()._deserialize(value, attr, data, **kwargs)
+
         if self.is_reverse_relation:  # FixMe
             return "REVERSE"
         if self.many and isinstance(value, list):
             data = []
             for pk in value:
                 try:
-                    data.append(self.related_model._default_manager.get(pk=pk))
+                    data.append(self.related_model._default_manager.get(**pk))
                 except ObjectDoesNotExist:
                     self.make_error('invalid', value=value)
             return data
         if self.to_field:
             try:
-                return self.related_model._default_manager.get(pk=value)
+                return self.related_model._default_manager.get(**value)
             except ObjectDoesNotExist:
                 self.make_error('invalid', value=value)
-        return super()._deserialize(value, attr, data, **kwargs)
+        return data
 
 
 class RelatedNested(ma.fields.Nested):
