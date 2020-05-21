@@ -1,6 +1,6 @@
 import typing
 
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 
 import marshmallow as ma
 from django.db import models
@@ -96,10 +96,15 @@ class RelatedPKField(ma.fields.Field):
                 self._field_cache[field_cls] = field
         return field._serialize(value, attr, obj, **kwargs)
 
+    def _validate(self, value):
+        if self.many and not isinstance(value, (list, tuple)):
+            raise ValidationError('ManytoMany fields values must be `list` or `tuple`')
+        return super()._validate(value)
+
     def _deserialize(self, value: typing.Any, attr: str = None, data: typing.Mapping[str, typing.Any] = None, **kwargs):
         if self.is_reverse_relation:  # FixMe
             return "REVERSE"
-        if self.many and isinstance(value, list):
+        if self.many and isinstance(value, (list, tuple)):
             data = []
             for pk in value:
                 try:
@@ -130,7 +135,7 @@ class RelatedField(ma.fields.Nested):
                 class Meta:
                     model = relation_info.related_model
                     include_pk = True
-                    _related_field_nested = True
+                    _related_field_schema = True
 
             nested = NestedSerializer
 

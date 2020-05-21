@@ -33,7 +33,8 @@ class ModelSchemaOpts(SchemaOpts):
         self.depth = getattr(meta, 'depth', None)
         self.ordered = getattr(meta, 'ordered', True)
         self.include_pk = getattr(meta, 'include_pk', True)
-        self._related_field_nested = getattr(meta, '_related_field_nested', False)
+        self.use_related_pk_fields = getattr(meta, 'use_related_pk_fields', False)
+        self._related_field_schema = getattr(meta, '_related_field_schema', False)
 
 
 class ModelSchemaMetaclass(SchemaMeta):
@@ -54,7 +55,7 @@ class ModelSchemaMetaclass(SchemaMeta):
         exclude = opts.exclude
         model = opts.model
         include_pk = opts.include_pk
-        _related_field_nested = opts._related_field_nested
+        _related_field_schema = opts._related_field_schema
 
         if not model:
             raise ImproperlyConfigured(
@@ -67,7 +68,7 @@ class ModelSchemaMetaclass(SchemaMeta):
                 '`model` option must be a Django model class'
             )
 
-        if not fields and not exclude and not _related_field_nested:
+        if not fields and not exclude and not _related_field_schema:
             raise ImproperlyConfigured(
                 'Creating a ModelSchema without either `Meta.fields` attribute '
                 'or `Meta.exclude` attribute is prohibited; %s '
@@ -111,26 +112,16 @@ class ModelSchemaMetaclass(SchemaMeta):
             # fields from the model"
             opts.fields = None
         Converter=opts.model_converter
-        converter = Converter(schema_cls=klass)
+        converter = Converter(
+            schema_cls=klass,
+            dict_cls=dict_cls
+        )
         declared_fields = super().get_declared_fields(
             klass, cls_fields, inherited_fields, dict_cls
         )
-        fields = mcs.get_fields(converter, klass, opts, dict_cls)
+        fields = converter.fields_for_model()
         fields.update(declared_fields)
         return fields
-
-    @classmethod
-    def get_fields(mcs, converter, klass, opts, dict_cls):
-        """
-        Returns converted schema fields for the django model
-        """
-
-        if opts.model is not None:
-            return converter.fields_for_model(
-                opts=opts,
-                dict_cls=dict_cls,
-            )
-        return dict_cls()
 
 
 class BaseModelSchema(Schema, metaclass=ModelSchemaMetaclass):
