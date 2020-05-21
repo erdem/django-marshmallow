@@ -1,8 +1,6 @@
-import typing
 from django.db import models
 from django.utils.text import capfirst
 
-import marshmallow as ma
 from marshmallow import validate
 
 from django_marshmallow import fields
@@ -87,10 +85,12 @@ class ModelFieldConverter:
                 continue
 
             relation_info = model_field_info.relations.get(field_name)
-            if relation_info and not relation_info.reverse:
+            if relation_info:
+                if relation_info.reverse:
+                    continue
+
                 if nested_depth:
                     model_schema_field = self.build_related_nested_field(
-                        self.schema_cls,
                         field_name,
                         model_field_info,
                         nested_depth
@@ -101,9 +101,6 @@ class ModelFieldConverter:
                         model_field_info
                     )
                 field_list.append(model_schema_field)
-                continue
-
-            if relation_info and relation_info.reverse:  #FixMe
                 continue
 
             if self.is_standard_field(model_field):
@@ -131,10 +128,12 @@ class ModelFieldConverter:
         field_kwargs = self.get_schema_field_kwargs(model_field)
         return field_name, fields.InferredField(**field_kwargs)
 
-    def build_related_nested_field(self, new_class, field_name, model_field_info, nested_depth):
+    def build_related_nested_field(self, field_name, model_field_info, nested_depth):
+        from django_marshmallow.schemas import ModelSchema
+
         relation_info = model_field_info.relations.get(field_name)
 
-        class RelatedModelSerializer(new_class):  # Fixme: rid of this
+        class RelatedModelSerializer(ModelSchema):  # Fixme: rid of this
             class Meta:
                 model = relation_info.related_model
                 fields = '__all__'
@@ -178,7 +177,6 @@ class ModelFieldConverter:
         field_kwargs['many'] = to_many
         field_kwargs['to_field'] = to_field
         field_kwargs['has_through_model'] = has_through_model
-        field_kwargs['is_reverse_relation'] = reverse
         field_kwargs['relation_info'] = relation_info
         return field_kwargs
 

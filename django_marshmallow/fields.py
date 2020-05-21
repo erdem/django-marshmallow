@@ -63,7 +63,6 @@ class RelatedPKField(ma.fields.Field):
             to_field,
             many,
             has_through_model,
-            is_reverse_relation,
             **kwargs
     ):
         super().__init__(**kwargs)
@@ -73,12 +72,9 @@ class RelatedPKField(ma.fields.Field):
         self.to_field = to_field
         self.many = many
         self.has_through_model = has_through_model
-        self.is_reverse_relation = is_reverse_relation
         self._field_cache = {}
 
     def _serialize(self, value: typing.Any, attr: str, obj: typing.Any, **kwargs):
-        if self.is_reverse_relation:  # FixMe
-            return "REVERSE"
         if self.many and isinstance(value, models.Manager):
             value = list(value.values_list('pk', flat=True))
         if self.many and isinstance(value, list):
@@ -102,8 +98,6 @@ class RelatedPKField(ma.fields.Field):
         return super()._validate(value)
 
     def _deserialize(self, value: typing.Any, attr: str = None, data: typing.Mapping[str, typing.Any] = None, **kwargs):
-        if self.is_reverse_relation:  # FixMe
-            return "REVERSE"
         if self.many and isinstance(value, (list, tuple)):
             data = []
             for pk in value:
@@ -153,16 +147,12 @@ class RelatedField(ma.fields.Nested):
         self.to_field = relation_info.to_field
         self.many = kwargs.get('many', False)
         self.relation_info = relation_info
-        self.is_reverse_relation = kwargs.get('is_reverse_relation', False)
 
     def _validate(self, value):
         return super()._validate(value)
 
     def _deserialize(self, value: typing.Any, attr: str = None, data: typing.Mapping[str, typing.Any] = None, **kwargs):
-        cc = super()._deserialize(value, attr, data, **kwargs)
-
-        if self.is_reverse_relation:  # FixMe
-            return "REVERSE"
+        super()._deserialize(value, attr, data, **kwargs)
         if self.many and isinstance(value, list):
             data = []
             for pk in value:
