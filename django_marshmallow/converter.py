@@ -1,3 +1,4 @@
+import typing
 from django.db import models
 from django.utils.text import capfirst
 
@@ -45,32 +46,25 @@ class ModelFieldConverter:
         models.UUIDField: fields.UUID,
     }
 
+    related_pk_field_class = fields.RelatedPKField
     related_field_class = fields.RelatedField
     related_nested_class = fields.RelatedNested
 
-    def __init__(self, schema_cls=None):
+    def __init__(self, schema_cls, dict_cls=dict):
         self.schema_cls = schema_cls
-
-    @property
-    def type_mapping(self):
-        if self.schema_cls:
-            return self.schema_cls.TYPE_MAPPING
-        else:
-            return ma.Schema.TYPE_MAPPING
+        self.opts = schema_cls.opts
+        self.dict_cls = dict_cls
+        self._is_related_field_schema = self.opts._related_field_schema
 
     def is_standard_field(self, model_field):
         return model_field.__class__ in self.SCHEMA_FIELD_MAPPING
 
-    def fields_for_model(
-            self,
-            opts,
-            dict_cls
-    ):
-        model = opts.model
-        fields = opts.fields
-        exclude = opts.exclude
-        include_pk = opts.include_pk
-        nested_depth = opts.depth
+    def fields_for_model(self):
+        model = self.opts.model
+        schema_fields = self.opts.fields
+        exclude = self.opts.exclude
+        include_pk = self.opts.include_pk
+        nested_depth = self.opts.depth
 
         model_field_info = get_field_info(model)
         field_list = []
@@ -83,7 +77,7 @@ class ModelFieldConverter:
             field_list.append(pk_field)
         for field_name, model_field in model_field_info.all_fields.items():
 
-            if fields is not None and field_name not in fields:
+            if schema_fields is not None and field_name not in schema_fields:
                 continue
 
             if exclude and field_name in exclude:
@@ -118,7 +112,7 @@ class ModelFieldConverter:
                 model_schema_field = self.build_inferred_field(field_name, model_field)
             field_list.append(model_schema_field)
 
-        return dict_cls(field_list)
+        return self.dict_cls(field_list)
 
     def build_standard_field(self, field_name, model_field):
         field_class = self.SCHEMA_FIELD_MAPPING.get(model_field.__class__)
@@ -139,11 +133,13 @@ class ModelFieldConverter:
 
     def build_related_nested_field(self, new_class, field_name, model_field_info, nested_depth):
         relation_info = model_field_info.relations.get(field_name)
-        class RelatedModelSerializer(new_class):
+
+        class RelatedModelSerializer(new_class):  # Fixme: rid of this
             class Meta:
                 model = relation_info.related_model
                 fields = '__all__'
                 depth = nested_depth - 1
+
         field_kwargs = self.get_related_field_kwargs(relation_info)
         field_class = self.related_nested_class(RelatedModelSerializer, **field_kwargs)
         return field_name, field_class
@@ -151,7 +147,10 @@ class ModelFieldConverter:
     def build_related_field(self, field_name, model_field_info):
         relation_info = model_field_info.relations.get(field_name)
         field_kwargs = self.get_related_field_kwargs(relation_info)
-        field_class = self.related_field_class(**field_kwargs)
+        if self.opts.use_related_pk_fields:
+            field_class = self.related_pk_field_class(**field_kwargs)
+        else:
+            field_class = self.related_field_class(**field_kwargs)
         return field_name, field_class
 
     def get_related_field_kwargs(self, relation_info):
@@ -189,7 +188,7 @@ class ModelFieldConverter:
         validator_kwarg = list(model_field.validators)
         kwargs['model_field'] = model_field
 
-        if model_field.primary_key:
+        if model_field.primary_key and not self._is_related_field_schema:
             kwargs['required'] = False
             return kwargs
 
