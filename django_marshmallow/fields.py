@@ -184,6 +184,10 @@ class RelatedNested(ma.fields.Nested):
     def _load(self, value, data, partial=None):
         return super()._load(value, data, partial)
 
-    def _deserialize(self, value: typing.Any, attr: str = None, data: typing.Mapping[str, typing.Any] = None, **kwargs):
-        super()._deserialize(value, attr, data, **kwargs)
-        return self.schema.save()
+    def deserialize(self, value, attr=None, data=None, **kwargs):
+        data = super().deserialize(value, attr, data, **kwargs)
+        if self.many:
+            instance = [self.related_model(**d) for d in data]
+        else:
+            instance = self.related_model(**data)
+        return instance
