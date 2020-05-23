@@ -149,12 +149,18 @@ class ModelFieldConverter:
         if self.opts.use_related_pk_fields:
             field_class = self.related_pk_field_class(**field_kwargs)
         else:
+            related_pk_field = self.related_pk_field_class(**field_kwargs)
+            field_kwargs['values'] = related_pk_field
             field_class = self.related_field_class(**field_kwargs)
         return field_name, field_class
 
     def get_related_field_kwargs(self, relation_info):
         model_field, related_model, to_many, to_field, has_through_model, reverse = relation_info
+        related_target_name, related_value_field = self.build_standard_field(
+            to_field, related_model._meta.pk
+        )
         field_kwargs = self.get_schema_field_kwargs(model_field)
+        field_kwargs['related_value_field'] = related_value_field
         queryset = related_model._default_manager
         field_kwargs['queryset'] = queryset
 

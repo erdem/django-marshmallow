@@ -30,40 +30,45 @@ def o2o_related_instance(db_models):
     return one_to_one_instance
 
 
-@pytest.mark.parametrize(
-    'schema_fields_option',
-    [
-        '__all__',
-        ('name', 'foreign_key_field', 'many_to_many_field', 'one_to_one_field')
-    ]
-)
-def test_deserialization_related_primary_key_fields(
+def test_invalid_primary_key_validation_for_foreign_key_fields(
     db,
     db_models,
     fk_related_instance,
     o2o_related_instance,
-    m2m_related_instance,
-    schema_fields_option
+    m2m_related_instance
 ):
-    """
-        Load a schema has related fields, the schema related fields should get primary keys as value.
-    """
     class TestSchema(ModelSchema):
         class Meta:
             model = db_models.AllRelatedFieldsModel
-            fields = schema_fields_option
+            fields = ('foreign_key_field', )
 
     schema = TestSchema()
 
     assert db_models.AllRelatedFieldsModel.objects.count() == 0
 
     load_data = {
-        'name': 'Deserialized Instance',
-        'one_to_one_field': {'uuid': o2o_related_instance.uuid},
-        'foreign_key_field': "test",
-        'many_to_many_field': [{'uuid': m2m_related_instance.uuid}]
+        'foreign_key_field': {
+            'id': 'INVALID STRING ID'
+        }
     }
 
-    validated_data = schema.validate(load_data)
+    errors = schema.validate(load_data)
 
-    entity = db_models.AllRelatedFieldsModel.objects.first()
+    assert len(errors) > 0
+    assert errors['foreign_key_field']['id'] == ['Not a valid integer.']
+
+    load_data = {
+        'foreign_key_field': 'INVALID TYPE'
+    }
+    errors = schema.validate(load_data)
+
+    assert len(errors) > 0
+    assert errors['foreign_key_field'] == ['`RelatedField` data must be a mapping type.']
+
+    load_data = {
+        'foreign_key_field': {}
+    }
+    errors = schema.validate(load_data)
+
+    assert len(errors) > 0
+    assert errors['foreign_key_field'] == ['`RelatedField` data must be include a valid primary key value for ForeignKeyTarget model.']

@@ -1,9 +1,11 @@
 import typing
+from collections.abc import Mapping as _Mapping
 
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ObjectDoesNotExist
+from django.db import models
 
 import marshmallow as ma
-from django.db import models
+from marshmallow import ValidationError
 from marshmallow.fields import *
 
 
@@ -52,12 +54,12 @@ class SlugField(InferredField):
 class RelatedPKField(ma.fields.Field):
 
     default_error_messages = {
-        "invalid": "Could not deserialize related value {value!r}; "
-        "expected a dictionary with keys {keys!r}"
+        'related_object_does_not_exists': 'Entity could not found on {field_name} for value: {value!r}'
     }
 
     def __init__(
             self,
+            related_value_field,
             model_field,
             related_model,
             to_field,
@@ -67,6 +69,7 @@ class RelatedPKField(ma.fields.Field):
     ):
         super().__init__(**kwargs)
 
+        self.related_value_field = related_value_field
         self.model_field = model_field
         self.related_model = related_model
         self.to_field = to_field
@@ -97,44 +100,43 @@ class RelatedPKField(ma.fields.Field):
             raise ValidationError('ManytoMany fields values must be `list` or `tuple`')
         return super()._validate(value)
 
-    def _deserialize(self, value: typing.Any, attr: str = None, data: typing.Mapping[str, typing.Any] = None, **kwargs):
+    def _deserialize(self, value, attr = None, data = None, **kwargs):
+        value = self.related_value_field.deserialize(value, attr, data)
+
         if self.many and isinstance(value, (list, tuple)):
             data = []
             for pk in value:
                 try:
                     data.append(self.related_model._default_manager.get(pk=pk))
                 except ObjectDoesNotExist:
-                    self.make_error('invalid', value=value)
+                    raise self.make_error(
+                        'related_object_does_not_exists',
+                        field_name=self.name,
+                        value=value
+                    )
             return data
         if self.to_field:
             try:
                 return self.related_model._default_manager.get(pk=value)
             except ObjectDoesNotExist:
-                self.make_error('invalid', value=value)
+                raise self.make_error(
+                    'related_object_does_not_exists',
+                    field_name=self.name,
+                    value=value
+                )
         return super()._deserialize(value, attr, data, **kwargs)
 
 
-class RelatedField(ma.fields.Nested):
+class RelatedField(ma.fields.Dict):
 
-    default_error_messages = {  # todo update error messages
-        "invalid": "Could not deserialize related value {value!r}; "
-        "expected a dictionary with keys {keys!r}"
+    default_error_messages = {
+        'invalid': '`RelatedField` data must be a mapping type.',
+        'empty': '`RelatedField` data must be include a valid primary key value for {model_name} model.'
     }
 
-    def __init__(self, nested=None, relation_info=None, **kwargs):
-        from django_marshmallow.schemas import ModelSchema
-
-        if not nested:
-            class NestedSerializer(ModelSchema):  # fixMe use `model_schema_factory` method
-                class Meta:
-                    model = relation_info.related_model
-                    include_pk = True
-                    _related_field_schema = True
-
-            nested = NestedSerializer
-
-        super().__init__(nested, **kwargs)
-        self.related_model = kwargs.get('related_model', getattr(nested.opts, 'model', None))
+    def __init__(self, keys=String, values=None, relation_info=None, **kwargs):
+        super().__init__(keys, values, **kwargs)
+        self.related_model = getattr(relation_info, 'related_model', None)
 
         if not self.related_model:
             raise ma.exceptions.MarshmallowError(
@@ -143,30 +145,35 @@ class RelatedField(ma.fields.Nested):
                 ' `related_model` parameter.'
             )
 
-        self.model_field = kwargs.get('model_field')
-        self.to_field = relation_info.to_field
-        self.many = kwargs.get('many', False)
-        self.relation_info = relation_info
+    def _deserialize(self, value, attr, data, **kwargs):
+        if not isinstance(value, _Mapping):
+            raise self.make_error("invalid")
+        if len(value) == 0:
+            raise self.make_error("empty", model_name=self.related_model.__name__)
 
-    def _validate(self, value):
-        return super()._validate(value)
-
-    def _deserialize(self, value: typing.Any, attr: str = None, data: typing.Mapping[str, typing.Any] = None, **kwargs):
-        super()._deserialize(value, attr, data, **kwargs)
-        if self.many and isinstance(value, list):
-            data = []
-            for pk in value:
+        errors = dict()
+        keys = {k: k for k in value.keys()}
+        result = self.mapping_type()
+        if self.value_field is None:
+            for k, v in value.items():
+                if k in keys:
+                    result[keys[k]] = v
+        else:
+            for key, val in value.items():
                 try:
-                    data.append(self.related_model._default_manager.get(**pk))
-                except ObjectDoesNotExist:
-                    self.make_error('invalid', value=value)
-            return data
-        if self.to_field:
-            try:
-                return self.related_model._default_manager.get(**value)
-            except ObjectDoesNotExist:
-                self.make_error('invalid', value=value)
-        return data
+                    deser_val = self.value_field.deserialize(val, **kwargs)
+                except ValidationError as error:
+                    errors[key] = error.messages
+                    if error.valid_data is not None and key in keys:
+                        result[keys[key]] = error.valid_data
+                else:
+                    if key in keys:
+                        result[keys[key]] = deser_val
+
+        if errors:
+            raise ValidationError(errors, valid_data=result)
+
+        return result
 
 
 class RelatedNested(ma.fields.Nested):
@@ -180,9 +187,6 @@ class RelatedNested(ma.fields.Nested):
                 '"ModelSchema" or can use with a Marshmallow "Schema" class implementation along with'
                 ' `related_model` parameter.'
             )
-
-    def _load(self, value, data, partial=None):
-        return super()._load(value, data, partial)
 
     def deserialize(self, value, attr=None, data=None, **kwargs):
         data = super().deserialize(value, attr, data, **kwargs)
