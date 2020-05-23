@@ -30,13 +30,7 @@ def o2o_related_instance(db_models):
     return one_to_one_instance
 
 
-def test_invalid_primary_key_validation_for_foreign_key_fields(
-    db,
-    db_models,
-    fk_related_instance,
-    o2o_related_instance,
-    m2m_related_instance
-):
+def test_invalid_primary_key_validation_for_foreign_key_fields(db, db_models):
     class TestSchema(ModelSchema):
         class Meta:
             model = db_models.AllRelatedFieldsModel
@@ -63,7 +57,7 @@ def test_invalid_primary_key_validation_for_foreign_key_fields(
     errors = schema.validate(load_data)
 
     assert len(errors) > 0
-    assert errors['foreign_key_field'] == ['`RelatedField` data must be a mapping type.']
+    assert errors['foreign_key_field'] == ['`RelatedField` data must be a Mapping type.']
 
     load_data = {
         'foreign_key_field': {}
@@ -71,4 +65,52 @@ def test_invalid_primary_key_validation_for_foreign_key_fields(
     errors = schema.validate(load_data)
 
     assert len(errors) > 0
-    assert errors['foreign_key_field'] == ['`RelatedField` data must be include a valid primary key value for ForeignKeyTarget model.']
+    assert errors['foreign_key_field'] == [
+        '`RelatedField` data must be include a valid primary key value for ForeignKeyTarget model.'
+    ]
+
+
+def test_invalid_primary_key_validation_for_many_to_many_fields(db, db_models):
+
+    class TestSchema(ModelSchema):
+        class Meta:
+            model = db_models.AllRelatedFieldsModel
+            fields = ('many_to_many_field', )
+
+    schema = TestSchema()
+
+    assert db_models.AllRelatedFieldsModel.objects.count() == 0
+
+    load_data = {
+        'many_to_many_field': [
+            {
+                'id': 'INVALID STRING ID'
+            },
+            {
+                'id': '1'
+            }
+        ]
+    }
+
+    errors = schema.validate(load_data)
+
+    assert len(errors) > 0
+    assert errors['foreign_key_field']['id'] == ['Not a valid integer.']
+
+    load_data = {
+        'foreign_key_field': 'INVALID TYPE'
+    }
+    errors = schema.validate(load_data)
+
+    assert len(errors) > 0
+    assert errors['foreign_key_field'] == ['`RelatedField` data must be a Mapping type.']
+
+    load_data = {
+        'foreign_key_field': {}
+    }
+    errors = schema.validate(load_data)
+
+    assert len(errors) > 0
+    assert errors['foreign_key_field'] == [
+        '`RelatedField` data must be include a valid primary key value for ForeignKeyTarget model.'
+    ]

@@ -130,14 +130,14 @@ class RelatedPKField(ma.fields.Field):
 class RelatedField(ma.fields.Dict):
 
     default_error_messages = {
-        'invalid': '`RelatedField` data must be a mapping type.',
+        'invalid': '`RelatedField` data must be a {type} type.',
         'empty': '`RelatedField` data must be include a valid primary key value for {model_name} model.'
     }
 
-    def __init__(self, keys=String, values=None, relation_info=None, **kwargs):
+    def __init__(self, keys=String, values=None, relation_info=None, many=False, **kwargs):
         super().__init__(keys, values, **kwargs)
         self.related_model = getattr(relation_info, 'related_model', None)
-
+        self.many = many
         if not self.related_model:
             raise ma.exceptions.MarshmallowError(
                 'RelatedNested needs to use with a inherited class of '
@@ -146,19 +146,18 @@ class RelatedField(ma.fields.Dict):
             )
 
     def _deserialize(self, value, attr, data, **kwargs):
-        if not isinstance(value, _Mapping):
-            raise self.make_error("invalid")
-        if len(value) == 0:
-            raise self.make_error("empty", model_name=self.related_model.__name__)
+        if not self.many and not isinstance(value, _Mapping):
+            raise self.make_error('invalid', type=_Mapping.__name__)
+        if self.many and not isinstance(value, list):
+            raise self.make_error('invalid', type=list.__name__)
 
-        errors = dict()
-        keys = {k: k for k in value.keys()}
-        result = self.mapping_type()
-        if self.value_field is None:
-            for k, v in value.items():
-                if k in keys:
-                    result[keys[k]] = v
-        else:
+        if len(value) == 0:
+            raise self.make_error('empty', model_name=self.related_model.__name__)
+
+        if not self.many:
+            errors = dict()
+            result = dict()
+            keys = {k: k for k in value.keys()}
             for key, val in value.items():
                 try:
                     deser_val = self.value_field.deserialize(val, **kwargs)
@@ -169,6 +168,22 @@ class RelatedField(ma.fields.Dict):
                 else:
                     if key in keys:
                         result[keys[key]] = deser_val
+        else:
+            errors = list()
+            result = list()
+            for item in value:
+                item_data = dict()
+                for key, val in item.items():
+                    keys = {k: k for k in item.keys()}
+                    try:
+                        deser_val = self.value_field.deserialize(val, **kwargs)
+                    except ValidationError as error:
+                        errors.append({key: error.messages})
+                        if error.valid_data is not None and key in keys:
+                            item_data[keys[key]] = error.valid_data
+                    else:
+                        if key in keys:
+                            result[keys[key]] = deser_val
 
         if errors:
             raise ValidationError(errors, valid_data=result)
