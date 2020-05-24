@@ -150,7 +150,7 @@ class ModelFieldConverter:
             field_class = self.related_pk_field_class(**field_kwargs)
         else:
             related_pk_field = self.related_pk_field_class(**field_kwargs)
-            field_kwargs['values'] = related_pk_field
+            field_kwargs['related_pk_field'] = related_pk_field
             field_class = self.related_field_class(**field_kwargs)
         return field_name, field_class
 
@@ -181,6 +181,7 @@ class ModelFieldConverter:
         field_kwargs['model_field'] = model_field
         field_kwargs['related_model'] = related_model
         field_kwargs['many'] = to_many
+        field_kwargs['target_field'] = related_model._meta.pk.name
         field_kwargs['to_field'] = to_field
         field_kwargs['has_through_model'] = has_through_model
         field_kwargs['relation_info'] = relation_info

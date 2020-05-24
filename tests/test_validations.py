@@ -57,7 +57,7 @@ def test_invalid_primary_key_validation_for_foreign_key_fields(db, db_models):
     errors = schema.validate(load_data)
 
     assert len(errors) > 0
-    assert errors['foreign_key_field'] == ['`RelatedField` data must be a Mapping type.']
+    assert errors['foreign_key_field'] == ['`RelatedField` data must be a dict type.']
 
     load_data = {
         'foreign_key_field': {}
@@ -95,22 +95,20 @@ def test_invalid_primary_key_validation_for_many_to_many_fields(db, db_models):
     errors = schema.validate(load_data)
 
     assert len(errors) > 0
-    assert errors['foreign_key_field']['id'] == ['Not a valid integer.']
+    assert errors['many_to_many_field'] == ['Received invalid data key for related primary key. The related data key must be `uuid`']
 
     load_data = {
-        'foreign_key_field': 'INVALID TYPE'
+        'many_to_many_field': [
+            {
+                'uuid': 'INVALID STRING ID'
+            },
+            {
+                'uuid': '1'
+            }
+        ]
     }
+
     errors = schema.validate(load_data)
 
     assert len(errors) > 0
-    assert errors['foreign_key_field'] == ['`RelatedField` data must be a Mapping type.']
-
-    load_data = {
-        'foreign_key_field': {}
-    }
-    errors = schema.validate(load_data)
-
-    assert len(errors) > 0
-    assert errors['foreign_key_field'] == [
-        '`RelatedField` data must be include a valid primary key value for ForeignKeyTarget model.'
-    ]
+    assert errors['many_to_many_field'] == [{'uuid': ['Not a valid UUID.']}, {'uuid': ['Not a valid UUID.']}]

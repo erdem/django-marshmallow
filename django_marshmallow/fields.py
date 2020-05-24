@@ -1,5 +1,4 @@
 import typing
-from collections.abc import Mapping as _Mapping
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
@@ -54,7 +53,8 @@ class SlugField(InferredField):
 class RelatedPKField(ma.fields.Field):
 
     default_error_messages = {
-        'related_object_does_not_exists': 'Entity could not found on {field_name} for value: {value!r}'
+        'related_object_does_not_exists': 'Entity could not found on {field_name} for value: {value!r}',
+        'invalid_value': 'Related primary key value cannot be None'
     }
 
     def __init__(
@@ -101,6 +101,8 @@ class RelatedPKField(ma.fields.Field):
         return super()._validate(value)
 
     def _deserialize(self, value, attr = None, data = None, **kwargs):
+        if value is None:
+            raise self.make_error('invalid_value')
         value = self.related_value_field.deserialize(value, attr, data)
 
         if self.many and isinstance(value, (list, tuple)):
@@ -127,17 +129,23 @@ class RelatedPKField(ma.fields.Field):
         return super()._deserialize(value, attr, data, **kwargs)
 
 
-class RelatedField(ma.fields.Dict):
+class RelatedField(ma.fields.Field):
 
     default_error_messages = {
         'invalid': '`RelatedField` data must be a {type} type.',
-        'empty': '`RelatedField` data must be include a valid primary key value for {model_name} model.'
+        'empty': '`RelatedField` data must be include a valid primary key value for {model_name} model.',
+        'too_many_pk': 'Received too many primary key values for single related field.',
+        'invalid_keys': 'Received invalid data key for related primary key. The related data key must be `{field_name}`',
     }
 
-    def __init__(self, keys=String, values=None, relation_info=None, many=False, **kwargs):
-        super().__init__(keys, values, **kwargs)
+    def __init__(self, related_pk_field=RelatedPKField, target_field=None, relation_info=None, many=False, **kwargs):
+        super().__init__(**kwargs)
         self.related_model = getattr(relation_info, 'related_model', None)
+        self.to_field = relation_info.to_field
+        self.target_field = target_field
         self.many = many
+        self.collection_type = list if many else dict
+        self.value_field = related_pk_field
         if not self.related_model:
             raise ma.exceptions.MarshmallowError(
                 'RelatedNested needs to use with a inherited class of '
@@ -146,44 +154,43 @@ class RelatedField(ma.fields.Dict):
             )
 
     def _deserialize(self, value, attr, data, **kwargs):
-        if not self.many and not isinstance(value, _Mapping):
-            raise self.make_error('invalid', type=_Mapping.__name__)
+        if not self.many and not isinstance(value, dict):
+            raise self.make_error('invalid', type=dict.__name__)
+        if not self.many and len(value) > 1:
+            raise self.make_error('too_many_pk')
+
         if self.many and not isinstance(value, list):
             raise self.make_error('invalid', type=list.__name__)
 
         if len(value) == 0:
             raise self.make_error('empty', model_name=self.related_model.__name__)
 
+        result = self.collection_type()
+        errors = self.collection_type()
+
         if not self.many:
-            errors = dict()
-            result = dict()
-            keys = {k: k for k in value.keys()}
-            for key, val in value.items():
-                try:
-                    deser_val = self.value_field.deserialize(val, **kwargs)
-                except ValidationError as error:
-                    errors[key] = error.messages
-                    if error.valid_data is not None and key in keys:
-                        result[keys[key]] = error.valid_data
-                else:
-                    if key in keys:
-                        result[keys[key]] = deser_val
+            data_key = self.target_field if self.target_field in value else 'pk' if 'pk' in value else None
+            if data_key is None:
+                raise self.make_error('invalid_keys', field_name=self.target_field)
+            related_pk_value = value.get(data_key)
+            try:
+                deser_val = self.value_field.deserialize(related_pk_value, **kwargs)
+            except ValidationError as error:
+                errors[data_key] = error.messages
+            else:
+                result[data_key] = deser_val
         else:
-            errors = list()
-            result = list()
             for item in value:
-                item_data = dict()
-                for key, val in item.items():
-                    keys = {k: k for k in item.keys()}
-                    try:
-                        deser_val = self.value_field.deserialize(val, **kwargs)
-                    except ValidationError as error:
-                        errors.append({key: error.messages})
-                        if error.valid_data is not None and key in keys:
-                            item_data[keys[key]] = error.valid_data
-                    else:
-                        if key in keys:
-                            result[keys[key]] = deser_val
+                data_key = self.target_field if self.target_field in item else 'pk' if 'pk' in item else None
+                if data_key is None:
+                    raise self.make_error('invalid_keys', field_name=self.target_field)
+                related_pk_value = item.get(data_key)
+                try:
+                    deser_val = self.value_field.deserialize(related_pk_value, **kwargs)
+                except ValidationError as error:
+                    errors.append({data_key: error.messages})
+                else:
+                    result.append({data_key: deser_val})
 
         if errors:
             raise ValidationError(errors, valid_data=result)
