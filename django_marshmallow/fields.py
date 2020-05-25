@@ -53,7 +53,8 @@ class SlugField(InferredField):
 class RelatedPKField(ma.fields.Field):
 
     default_error_messages = {
-        'related_object_does_not_exists': 'Entity could not found on {field_name} for value: {value!r}',
+        'related_object_does_not_exists': '`{field_name}` related field entity does not exists for '
+                                          '"{value!r}" on {related_model}',
         'invalid_value': 'Related primary key value cannot be None'
     }
 
@@ -68,8 +69,10 @@ class RelatedPKField(ma.fields.Field):
             **kwargs
     ):
         super().__init__(**kwargs)
-
-        self.related_value_field = related_value_field
+        if not many:
+            self.related_value_field = related_value_field
+        else:
+            self.related_value_field = ma.fields.List(related_value_field)
         self.model_field = model_field
         self.related_model = related_model
         self.to_field = to_field
@@ -113,8 +116,9 @@ class RelatedPKField(ma.fields.Field):
                 except ObjectDoesNotExist:
                     raise self.make_error(
                         'related_object_does_not_exists',
-                        field_name=self.name,
-                        value=value
+                        field_name=self.model_field.name,
+                        value=value,
+                        related_model=self.related_model.__name__
                     )
             return data
         if self.to_field:
@@ -123,8 +127,9 @@ class RelatedPKField(ma.fields.Field):
             except ObjectDoesNotExist:
                 raise self.make_error(
                     'related_object_does_not_exists',
-                    field_name=self.name,
-                    value=value
+                    field_name=self.model_field.name,
+                    value=value,
+                    related_model=self.related_model.__name__
                 )
         return super()._deserialize(value, attr, data, **kwargs)
 
@@ -135,7 +140,8 @@ class RelatedField(ma.fields.Field):
         'invalid': '`RelatedField` data must be a {type} type.',
         'empty': '`RelatedField` data must be include a valid primary key value for {model_name} model.',
         'too_many_pk': 'Received too many primary key values for single related field.',
-        'invalid_keys': 'Received invalid data key for related primary key. The related data key must be `{field_name}`',
+        'invalid_keys': 'Received invalid data key for related primary key. '
+                        'The related data key must be `{field_name}` or `pk`',
     }
 
     def __init__(self, related_pk_field=RelatedPKField, target_field=None, relation_info=None, many=False, **kwargs):
@@ -180,17 +186,19 @@ class RelatedField(ma.fields.Field):
             else:
                 result[data_key] = deser_val
         else:
+            related_pk_values = []
             for item in value:
                 data_key = self.target_field if self.target_field in item else 'pk' if 'pk' in item else None
                 if data_key is None:
                     raise self.make_error('invalid_keys', field_name=self.target_field)
-                related_pk_value = item.get(data_key)
-                try:
-                    deser_val = self.value_field.deserialize(related_pk_value, **kwargs)
-                except ValidationError as error:
-                    errors.append({data_key: error.messages})
-                else:
-                    result.append({data_key: deser_val})
+                related_pk_values.append(item.get(data_key))
+
+            try:
+                deser_val = self.value_field.deserialize(related_pk_values, **kwargs)
+            except ValidationError as error:
+                errors.append({data_key: error.messages})
+            else:
+                result.append({data_key: deser_val})
 
         if errors:
             raise ValidationError(errors, valid_data=result)

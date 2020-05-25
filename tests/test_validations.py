@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 
 from django_marshmallow.schemas import ModelSchema
@@ -69,6 +71,30 @@ def test_invalid_primary_key_validation_for_foreign_key_fields(db, db_models):
         '`RelatedField` data must be include a valid primary key value for ForeignKeyTarget model.'
     ]
 
+    load_data = {
+        'foreign_key_field': {
+            'id': '1'
+        }
+    }
+    errors = schema.validate(load_data)
+
+    assert len(errors) > 0
+    assert errors['foreign_key_field'] == {'id': [
+        '`foreign_key_field` related field entity does not exists for "1" on ForeignKeyTarget'
+    ]}
+
+    load_data = {
+        'foreign_key_field': {
+            'pk': '1'
+        }
+    }
+    errors = schema.validate(load_data)
+
+    assert len(errors) > 0
+    assert errors['foreign_key_field'] == {'pk': [
+        '`foreign_key_field` related field entity does not exists for "1" on ForeignKeyTarget'
+    ]}
+
 
 def test_invalid_primary_key_validation_for_many_to_many_fields(db, db_models):
 
@@ -84,7 +110,7 @@ def test_invalid_primary_key_validation_for_many_to_many_fields(db, db_models):
     load_data = {
         'many_to_many_field': [
             {
-                'id': 'INVALID STRING ID'
+                'id': 'INVALID KEY'
             },
             {
                 'id': '1'
@@ -95,12 +121,14 @@ def test_invalid_primary_key_validation_for_many_to_many_fields(db, db_models):
     errors = schema.validate(load_data)
 
     assert len(errors) > 0
-    assert errors['many_to_many_field'] == ['Received invalid data key for related primary key. The related data key must be `uuid`']
+    assert errors['many_to_many_field'] == [
+        'Received invalid data key for related primary key. The related data key must be `uuid` or `pk`'
+    ]
 
     load_data = {
         'many_to_many_field': [
             {
-                'uuid': 'INVALID STRING ID'
+                'uuid': 'INVALID STRING UUID'
             },
             {
                 'uuid': '1'
@@ -111,4 +139,65 @@ def test_invalid_primary_key_validation_for_many_to_many_fields(db, db_models):
     errors = schema.validate(load_data)
 
     assert len(errors) > 0
-    assert errors['many_to_many_field'] == [{'uuid': ['Not a valid UUID.']}, {'uuid': ['Not a valid UUID.']}]
+    assert errors['many_to_many_field'] == [{'uuid': {0: ['Not a valid UUID.'], 1: ['Not a valid UUID.']}}]
+
+    load_data = {
+        'many_to_many_field': [
+            {
+                'pk': 'INVALID PK'
+            },
+            {
+                'pk': '1'
+            }
+        ]
+    }
+
+    errors = schema.validate(load_data)
+
+    assert len(errors) > 0
+    assert errors['many_to_many_field'] == [{'pk': {0: ['Not a valid UUID.'], 1: ['Not a valid UUID.']}}]
+
+    uuid_1 = uuid.uuid4()
+    uuid_2 = uuid.uuid4()
+
+    load_data = {
+        'many_to_many_field': [
+            {
+                'uuid': uuid_1
+            },
+            {
+                'uuid': uuid_2
+            }
+        ]
+    }
+
+
+    errors = schema.validate(load_data)
+
+    assert len(errors) > 0
+    assert errors['many_to_many_field'] == [{'uuid': ['`many_to_many_field` related field entity does not exists for '
+           f'"[UUID(\'{uuid_1}\'), '
+           f'UUID(\'{uuid_2}\')]" on '
+           'ManyToManyTarget']}]
+
+    uuid_1 = str(uuid.uuid4())
+    uuid_2 = str(uuid.uuid4())
+
+    load_data = {
+        'many_to_many_field': [
+            {
+                'pk': uuid_1
+            },
+            {
+                'pk': uuid_2
+            }
+        ]
+    }
+
+    errors = schema.validate(load_data)
+
+    assert len(errors) > 0
+    assert errors['many_to_many_field'] == [{'pk': ['`many_to_many_field` related field entity does not exists for '
+           f'"[UUID(\'{uuid_1}\'), '
+           f'UUID(\'{uuid_2}\')]" on '
+           'ManyToManyTarget']}]
