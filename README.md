@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.com/erdem/django-marshmallow.svg?branch=master)](https://travis-ci.com/erdem/django-marshmallow)
 [![Coverage Status](https://coveralls.io/repos/github/erdem/django-marshmallow/badge.svg?branch=master)](https://coveralls.io/github/erdem/django-marshmallow?branch=master)
 
 
