@@ -1,3 +1,6 @@
+[![Coverage Status](https://coveralls.io/repos/github/erdem/django-marshmallow/badge.svg?branch=master)](https://coveralls.io/github/erdem/django-marshmallow?branch=master)
+
+
 ### Notice: The stable version is not avaiable. Currently, it's prototype and still developing. Feel free to contribute ideas and PRs.   
 
 This is a package that making serialization for django model objects and major python data types. It is a wrapper for [marsmallow package](https://marshmallow.readthedocs.io). The main aim is serialize the django model class objects.
