@@ -18,7 +18,7 @@ install:
 
 
 script:
-  - coverage run --source='django_marshmallow' pytest
+  - pytest --cov-report term --cov='django_marshmallow' tests/
 
 after_success:
   - coveralls
