@@ -146,7 +146,7 @@ class ModelFieldConverter:
     def build_related_field(self, field_name, model_field_info):
         relation_info = model_field_info.relations.get(field_name)
         field_kwargs = self.get_related_field_kwargs(relation_info)
-        if self.opts.use_related_pk_fields:
+        if not self.opts.expand_related_pk_fields:
             field_class = self.related_pk_field_class(**field_kwargs)
         else:
             related_pk_field = self.related_pk_field_class(**field_kwargs)

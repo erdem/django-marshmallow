@@ -33,7 +33,7 @@ class ModelSchemaOpts(SchemaOpts):
         self.depth = getattr(meta, 'depth', None)
         self.ordered = getattr(meta, 'ordered', True)
         self.include_pk = getattr(meta, 'include_pk', True)
-        self.use_related_pk_fields = getattr(meta, 'use_related_pk_fields', False)
+        self.expand_related_pk_fields = getattr(meta, 'expand_related_pk_fields', True)
         self._related_field_schema = getattr(meta, '_related_field_schema', False)
 
 
