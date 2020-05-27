@@ -79,7 +79,7 @@ def test_related_pk_fields_deserialization(
         class Meta:
             model = db_models.AllRelatedFieldsModel
             fields = ('name', 'foreign_key_field', 'many_to_many_field', 'one_to_one_field')
-            use_related_pk_fields = True
+            expand_related_pk_fields = False
 
     schema = TestSchema()
 

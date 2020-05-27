@@ -136,8 +136,8 @@ def test_schema_serialization_with_related_fields(db_models, all_related_obj):
     data = schema.dump(all_related_obj)
 
     assert data['name'] == all_related_obj.name
-    assert isinstance(data['foreign_key_field'], OrderedDict) is True
-    assert isinstance(data['one_to_one_field'], OrderedDict) is True
+    assert isinstance(data['foreign_key_field'], dict) is True
+    assert isinstance(data['one_to_one_field'], dict) is True
     assert isinstance(data['many_to_many_field'], list) is True
 
     assert data['foreign_key_field']['id'] == all_related_obj.foreign_key_field.id

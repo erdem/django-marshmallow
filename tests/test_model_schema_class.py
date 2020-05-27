@@ -173,19 +173,16 @@ class TestModelSchemaFieldConverter:
                 fields = ('foreign_key_field', 'many_to_many_field')
 
         schema = TestModelSchema()
-        schema_foreign_key_field = schema.fields['foreign_key_field']
-        foreign_key_related_schema = schema_foreign_key_field.schema
-        fk_related_pk_field = foreign_key_related_schema.pk_field
 
-        # ForeignKeyTarget model related schema should have integer primary key field
-        assert isinstance(fk_related_pk_field, fields.Integer) is True
+        schema_foreign_key_field = schema.fields['foreign_key_field']
+        assert isinstance(schema_foreign_key_field, fields.RelatedField)
+        fk_related_pk_field = schema_foreign_key_field.related_pk_field
+        assert isinstance(fk_related_pk_field, fields.RelatedPKField) is True
 
         schema_many_to_many_field = schema.fields['many_to_many_field']
-        many_to_many_related_schema = schema_many_to_many_field.schema
-        m2m_related_pk_field = many_to_many_related_schema.pk_field
+        assert isinstance(schema_many_to_many_field, fields.RelatedField)
+        assert schema_many_to_many_field.many is True
 
-        # ManyToManyTarget model related schema should have UUID primary key field
-        assert isinstance(m2m_related_pk_field, fields.UUID) is True
 
     @pytest.mark.parametrize('schema_fields_option', ['__all__', ('foreign_key_field', 'many_to_many_field')])
     def test_generated_related_nested_fields(self, db_models, schema_fields_option):
