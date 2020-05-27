@@ -19,7 +19,7 @@ install:
 
 
 script:
-  - pytest --cov-report term --cov='django_marshmallow' .
+  - pytest --cov-report term --cov='django_marshmallow' tests/
 
 after_success:
   - coveralls
