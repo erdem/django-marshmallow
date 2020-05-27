@@ -160,7 +160,7 @@ class ModelFieldConverter:
             to_field, related_model._meta.pk
         )
         field_kwargs = self.get_schema_field_kwargs(model_field)
-        field_kwargs['related_value_field'] = related_value_field
+        field_kwargs['related_pk_value_field'] = related_value_field
         queryset = related_model._default_manager
         field_kwargs['queryset'] = queryset
 

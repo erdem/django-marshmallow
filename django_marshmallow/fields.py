@@ -59,53 +59,42 @@ class RelatedPKField(ma.fields.Field):
 
     def __init__(
             self,
-            related_value_field,
+            related_pk_value_field,
             model_field,
             related_model,
             to_field,
-            many,
-            has_through_model,
+            many=False,
             **kwargs
     ):
         super().__init__(**kwargs)
         if not many:
-            self.related_value_field = related_value_field
+            self.related_pk_value_field = related_pk_value_field
         else:
-            self.related_value_field = ma.fields.List(related_value_field)
+            self.related_pk_value_field = ma.fields.List(related_pk_value_field)
         self.model_field = model_field
         self.related_model = related_model
         self.to_field = to_field
         self.many = many
-        self.has_through_model = has_through_model
-        self._field_cache = {}
 
     def _serialize(self, value: typing.Any, attr: str, obj: typing.Any, **kwargs):
-        if self.many and isinstance(value, models.Manager):
-            value = list(value.values_list('pk', flat=True))
-        if self.many and isinstance(value, list):
-            value = [v.id for v in value if isinstance(v, self.related_model)]
+        related_field_value = getattr(obj, attr, None)
+        if self.many and isinstance(related_field_value, models.Manager):
+            value = list(related_field_value.values_list('pk', flat=True))
+        if self.many and isinstance(related_field_value, list):
+            value = [v.pk for v in related_field_value if isinstance(v, self.related_model)]
         if self.to_field:
-            value = getattr(value, self.to_field)
-
-        field_cls = self.root.TYPE_MAPPING.get(type(value))
-        if field_cls is None:
-            field = super()
-        else:
-            field = self._field_cache.get(field_cls)
-            if field is None:
-                field = field_cls()
-                self._field_cache[field_cls] = field
-        return field._serialize(value, attr, obj, **kwargs)
+            value = getattr(related_field_value, self.to_field)
+        return self.related_pk_value_field._serialize(value, attr, obj)
 
     def _validate(self, value):
         if self.many and not isinstance(value, (list, tuple)):
             raise ValidationError('ManytoMany fields values must be `list` or `tuple`')
         return super()._validate(value)
 
-    def _deserialize(self, value, attr = None, data = None, **kwargs):
+    def _deserialize(self, value, attr=None, data=None, **kwargs):
         if value is None:
             raise self.make_error('invalid_value')
-        value = self.related_value_field.deserialize(value, attr, data)
+        value = self.related_pk_value_field.deserialize(value, attr, data)
 
         if self.many and isinstance(value, (list, tuple)):
             invalid_pks = []
@@ -135,7 +124,7 @@ class RelatedPKField(ma.fields.Field):
                     value=str(value),
                     related_model=self.related_model.__name__
                 )
-        return super()._deserialize(value, attr, data, **kwargs)
+        raise self.make_error('invalid_value')
 
 
 class RelatedField(ma.fields.Field):
@@ -154,13 +143,20 @@ class RelatedField(ma.fields.Field):
         self.target_field = target_field
         self.many = many
         self.collection_type = list if many else dict
-        self.value_field = related_pk_field
+        self.related_pk_field = related_pk_field
         if not self.related_model:
             raise ma.exceptions.MarshmallowError(
                 'RelatedNested needs to use with a inherited class of '
                 '"ModelSchema" or can use with a Marshmallow "Schema" class implementation along with'
                 ' `related_model` parameter.'
             )
+
+    def _serialize(self, value: typing.Any, attr: str, obj: typing.Any, **kwargs):
+        if self.many:
+            return [{self.target_field: m} for m in self.related_pk_field.serialize(attr, obj)]
+        return {
+            self.target_field: self.related_pk_field.serialize(attr, obj)
+        }
 
     def _deserialize(self, value, attr, data, **kwargs):
         if not self.many and not isinstance(value, dict):
@@ -187,11 +183,11 @@ class RelatedField(ma.fields.Field):
                 )
             related_pk_value = value.get(data_key)
             try:
-                deser_val = self.value_field.deserialize(related_pk_value, **kwargs)
+                deser_val = self.related_pk_field.deserialize(related_pk_value, **kwargs)
             except ValidationError as error:
                 errors[data_key] = error.messages
             else:
-                result[data_key] = deser_val
+                result = deser_val
         else:
             related_pk_values = []
             for item in value:
@@ -205,11 +201,11 @@ class RelatedField(ma.fields.Field):
                 related_pk_values.append(item.get(data_key))
 
             try:
-                deser_val = self.value_field.deserialize(related_pk_values, **kwargs)
+                deser_val = self.related_pk_field.deserialize(related_pk_values, **kwargs)
             except ValidationError as error:
                 errors.append({data_key: error.messages})
             else:
-                result.append({data_key: deser_val})
+                result = deser_val
 
         if errors:
             raise ValidationError(errors, valid_data=result)
