@@ -145,6 +145,28 @@ def test_schema_serialization_with_related_fields(db_models, all_related_obj):
     assert data['many_to_many_field'][0]['uuid'] == str(all_related_obj.many_to_many_field.all().first().uuid)
 
 
-def test_schema_serialization_with_nested_declared_fields(db_models):
-    pass
+def test_schema_serialization_with_nested_schema(db_models, all_related_obj):
+    class M2MSchema(ModelSchema):
+
+        class Meta:
+            model = db_models.ManyToManyTarget
+            fields = ('uuid', 'name')
+
+    class TestSchema(ModelSchema):
+        many_to_many_field = fields.RelatedNested(M2MSchema, many=True)
+
+        class Meta:
+            model = db_models.AllRelatedFieldsModel
+            fields = ('name', 'many_to_many_field')
+
+    schema = TestSchema()
+    data = schema.dump(all_related_obj)
+
+    assert isinstance(data['many_to_many_field'], list) is True
+
+    assert data['many_to_many_field'][0]['uuid'] == str(all_related_obj.many_to_many_field.all()[0].uuid)
+    assert data['many_to_many_field'][1]['name'] == str(all_related_obj.many_to_many_field.all()[1].name)
+    assert data['many_to_many_field'][1]['uuid'] == str(all_related_obj.many_to_many_field.all()[1].uuid)
+    assert data['many_to_many_field'][1]['name'] == str(all_related_obj.many_to_many_field.all()[1].name)
+
 

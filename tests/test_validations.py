@@ -2,6 +2,7 @@ import uuid
 
 import pytest
 
+from django_marshmallow import fields
 from django_marshmallow.schemas import ModelSchema
 
 
@@ -343,3 +344,33 @@ def test_invalid_primary_key_validation_for_one_to_one_fields(db, db_models, o2o
     errors = schema.validate(load_data)
 
     assert len(errors) == 0
+
+
+def test_nested_schema_validations(db, db_models):
+    class ForeignKeySchema(ModelSchema):
+
+        class Meta:
+            model = db_models.ForeignKeyTarget
+            fields = ('id', 'name')
+
+    class TestSchema(ModelSchema):
+        foreign_key_field = fields.RelatedNested(ForeignKeySchema)
+
+        class Meta:
+            model = db_models.AllRelatedFieldsModel
+            fields = ('name', 'foreign_key_field')
+
+    assert db_models.AllRelatedFieldsModel.objects.count() == 0
+
+    load_data = {
+        'name': 'Nested Schema Test Name',
+        'foreign_key_field': {
+            'name': None
+        }
+    }
+
+    schema = TestSchema()
+    errors = schema.validate(load_data)
+
+    assert len(errors) > 0
+    assert errors['foreign_key_field']['name'] == ['Field may not be null.']
