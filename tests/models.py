@@ -1,12 +1,8 @@
 import decimal
 import tempfile
-from types import SimpleNamespace
-
-import pytest
 import uuid as uuid
 from django.core.validators import MinValueValidator, MinLengthValidator, MaxValueValidator
 from django.db import models
-
 
 
 class CustomField(models.CharField):
@@ -49,6 +45,7 @@ class DataFieldsModel(TestAbstractModel):
     slug_field = models.SlugField()
     small_integer_field = models.SmallIntegerField()
     text_field = models.TextField()
+    text_field_blank_true = models.TextField(blank=True)
     file_field = models.FileField()
     time_field = models.TimeField()
     url_field = models.URLField(max_length=255)

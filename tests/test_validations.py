@@ -52,53 +52,53 @@ def test_invalid_primary_key_validation_for_foreign_key_fields(db, db_models, fk
 
     assert db_models.AllRelatedFieldsModel.objects.count() == 0
 
-    load_data = {
+    validate_data = {
         'foreign_key_field': {
             'id': 'INVALID STRING PK'
         }
     }
 
-    errors = schema.validate(load_data)
+    errors = schema.validate(validate_data)
 
     assert len(errors) > 0
     assert errors['foreign_key_field']['id'] == ['Not a valid integer.']
 
-    load_data = {
+    validate_data = {
         'foreign_key_field': 'INVALID TYPE'
     }
-    errors = schema.validate(load_data)
+    errors = schema.validate(validate_data)
 
     assert len(errors) > 0
     assert errors['foreign_key_field'] == ['`RelatedField` data must be a dict type.']
 
-    load_data = {
+    validate_data = {
         'foreign_key_field': {}
     }
-    errors = schema.validate(load_data)
+    errors = schema.validate(validate_data)
 
     assert len(errors) > 0
     assert errors['foreign_key_field'] == [
         '`RelatedField` data must be include a valid primary key value for ForeignKeyTarget model.'
     ]
 
-    load_data = {
+    validate_data = {
         'foreign_key_field': {
             'id': '888'
         }
     }
-    errors = schema.validate(load_data)
+    errors = schema.validate(validate_data)
 
     assert len(errors) > 0
     assert errors['foreign_key_field'] == {'id': [
         '`foreign_key_field` related field entity does not exists for "888" on ForeignKeyTarget'
     ]}
 
-    load_data = {
+    validate_data = {
         'foreign_key_field': {
             'pk': '888'
         }
     }
-    errors = schema.validate(load_data)
+    errors = schema.validate(validate_data)
 
     assert len(errors) > 0
     assert errors['foreign_key_field'] == {'pk': [
@@ -107,21 +107,21 @@ def test_invalid_primary_key_validation_for_foreign_key_fields(db, db_models, fk
 
     # test valid datas
 
-    load_data = {
+    validate_data = {
         'foreign_key_field': {
             'pk': fk_related_instance.pk
         }
     }
-    errors = schema.validate(load_data)
+    errors = schema.validate(validate_data)
 
     assert len(errors) == 0
 
-    load_data = {
+    validate_data = {
         'foreign_key_field': {
             'id': fk_related_instance.pk
         }
     }
-    errors = schema.validate(load_data)
+    errors = schema.validate(validate_data)
 
     assert len(errors) == 0
 
@@ -137,7 +137,7 @@ def test_invalid_primary_key_validation_for_many_to_many_fields(db, db_models, m
 
     assert db_models.AllRelatedFieldsModel.objects.count() == 0
 
-    load_data = {
+    validate_data = {
         'many_to_many_field': [
             {
                 'invalid_key': 'INVALID KEY'
@@ -148,14 +148,14 @@ def test_invalid_primary_key_validation_for_many_to_many_fields(db, db_models, m
         ]
     }
 
-    errors = schema.validate(load_data)
+    errors = schema.validate(validate_data)
 
     assert len(errors) > 0
     assert errors['many_to_many_field'] == [
         'Received invalid data key(`invalid_key`) for `uuid` field. The related data key must be `uuid` or `pk`'
     ]
 
-    load_data = {
+    validate_data = {
         'many_to_many_field': [
             {
                 'uuid': 'INVALID STRING UUID'
@@ -166,12 +166,12 @@ def test_invalid_primary_key_validation_for_many_to_many_fields(db, db_models, m
         ]
     }
 
-    errors = schema.validate(load_data)
+    errors = schema.validate(validate_data)
 
     assert len(errors) > 0
     assert errors['many_to_many_field'] == [{'uuid': {0: ['Not a valid UUID.'], 1: ['Not a valid UUID.']}}]
 
-    load_data = {
+    validate_data = {
         'many_to_many_field': [
             {
                 'pk': 'INVALID PK'
@@ -182,7 +182,7 @@ def test_invalid_primary_key_validation_for_many_to_many_fields(db, db_models, m
         ]
     }
 
-    errors = schema.validate(load_data)
+    errors = schema.validate(validate_data)
 
     assert len(errors) > 0
     assert errors['many_to_many_field'] == [{'pk': {0: ['Not a valid UUID.'], 1: ['Not a valid UUID.']}}]
@@ -190,7 +190,7 @@ def test_invalid_primary_key_validation_for_many_to_many_fields(db, db_models, m
     uuid_1 = uuid.uuid4()
     uuid_2 = uuid.uuid4()
 
-    load_data = {
+    validate_data = {
         'many_to_many_field': [
             {
                 'uuid': uuid_1
@@ -201,7 +201,7 @@ def test_invalid_primary_key_validation_for_many_to_many_fields(db, db_models, m
         ]
     }
 
-    errors = schema.validate(load_data)
+    errors = schema.validate(validate_data)
 
     assert len(errors) > 0
     assert errors['many_to_many_field'] == [{'uuid': ['`many_to_many_field` related field entity does not exists for '
@@ -211,7 +211,7 @@ def test_invalid_primary_key_validation_for_many_to_many_fields(db, db_models, m
     uuid_1 = str(uuid.uuid4())
     uuid_2 = str(uuid.uuid4())
 
-    load_data = {
+    validate_data = {
         'many_to_many_field': [
             {
                 'pk': uuid_1
@@ -222,7 +222,7 @@ def test_invalid_primary_key_validation_for_many_to_many_fields(db, db_models, m
         ]
     }
 
-    errors = schema.validate(load_data)
+    errors = schema.validate(validate_data)
 
     assert len(errors) > 0
     assert errors['many_to_many_field'] == [{'pk': ['`many_to_many_field` related field entity does not exists for '
@@ -230,7 +230,7 @@ def test_invalid_primary_key_validation_for_many_to_many_fields(db, db_models, m
            f'{uuid_2}" on ManyToManyTarget']}]
 
     # test valid datas
-    load_data = {
+    validate_data = {
         'many_to_many_field': [
             {
                 'uuid': m2m_related_instances[0].pk
@@ -241,11 +241,11 @@ def test_invalid_primary_key_validation_for_many_to_many_fields(db, db_models, m
         ]
     }
 
-    errors = schema.validate(load_data)
+    errors = schema.validate(validate_data)
 
     assert len(errors) == 0
 
-    load_data = {
+    validate_data = {
         'many_to_many_field': [
             {
                 'pk': m2m_related_instances[0].pk
@@ -256,7 +256,7 @@ def test_invalid_primary_key_validation_for_many_to_many_fields(db, db_models, m
         ]
     }
 
-    errors = schema.validate(load_data)
+    errors = schema.validate(validate_data)
 
     assert len(errors) == 0
 
@@ -271,29 +271,29 @@ def test_invalid_primary_key_validation_for_one_to_one_fields(db, db_models, o2o
 
     assert db_models.AllRelatedFieldsModel.objects.count() == 0
 
-    load_data = {
+    validate_data = {
         'one_to_one_field': {
             'uuid': 'INVALID STRING PK'
         }
     }
 
-    errors = schema.validate(load_data)
+    errors = schema.validate(validate_data)
 
     assert len(errors) > 0
     assert errors['one_to_one_field']['uuid'] == ['Not a valid UUID.']
 
-    load_data = {
+    validate_data = {
         'one_to_one_field': 'INVALID TYPE'
     }
-    errors = schema.validate(load_data)
+    errors = schema.validate(validate_data)
 
     assert len(errors) > 0
     assert errors['one_to_one_field'] == ['`RelatedField` data must be a dict type.']
 
-    load_data = {
+    validate_data = {
         'one_to_one_field': {}
     }
-    errors = schema.validate(load_data)
+    errors = schema.validate(validate_data)
 
     assert len(errors) > 0
     assert errors['one_to_one_field'] == [
@@ -302,24 +302,24 @@ def test_invalid_primary_key_validation_for_one_to_one_fields(db, db_models, o2o
 
     # invalid key
     uuid_pk = uuid.uuid4()
-    load_data = {
+    validate_data = {
         'one_to_one_field': {
             'invalid_key': uuid_pk
         }
     }
-    errors = schema.validate(load_data)
+    errors = schema.validate(validate_data)
 
     assert len(errors) > 0
     assert errors['one_to_one_field'] == [
         'Received invalid data key(`invalid_key`) for `uuid` field. The related data key must be `uuid` or `pk`'
     ]
 
-    load_data = {
+    validate_data = {
         'one_to_one_field': {
             'pk': uuid_pk
         }
     }
-    errors = schema.validate(load_data)
+    errors = schema.validate(validate_data)
 
     assert len(errors) > 0
     assert errors['one_to_one_field'] == {'pk': ['`one_to_one_field` related field entity does not exists for '
@@ -327,21 +327,21 @@ def test_invalid_primary_key_validation_for_one_to_one_fields(db, db_models, o2o
 
     # test valid datas
 
-    load_data = {
+    validate_data = {
         'one_to_one_field': {
             'pk': o2o_related_instance.pk
         }
     }
-    errors = schema.validate(load_data)
+    errors = schema.validate(validate_data)
 
     assert len(errors) == 0
 
-    load_data = {
+    validate_data = {
         'one_to_one_field': {
             'uuid': o2o_related_instance.uuid
         }
     }
-    errors = schema.validate(load_data)
+    errors = schema.validate(validate_data)
 
     assert len(errors) == 0
 
@@ -362,7 +362,7 @@ def test_nested_schema_validations(db, db_models):
 
     assert db_models.AllRelatedFieldsModel.objects.count() == 0
 
-    load_data = {
+    validate_data = {
         'name': 'Nested Schema Test Name',
         'foreign_key_field': {
             'name': None
@@ -370,7 +370,26 @@ def test_nested_schema_validations(db, db_models):
     }
 
     schema = TestSchema()
-    errors = schema.validate(load_data)
+    errors = schema.validate(validate_data)
 
     assert len(errors) > 0
     assert errors['foreign_key_field']['name'] == ['Field may not be null.']
+
+
+def test_string_allow_blank_validation(db_models):
+    class TestSchema(ModelSchema):
+        
+        class Meta:
+            model = db_models.DataFieldsModel
+            fields = ('char_field', 'text_field', 'text_field_blank_true')
+
+    validate_data = {
+        'char_field': '',
+        'text_field': '',
+        'text_field_blank_true': '',
+    }
+    schema = TestSchema()
+    errors = schema.validate(validate_data)
+
+    assert len(errors) == 2
+    assert errors == {'char_field': ['Field cannot be blank'], 'text_field': ['Field cannot be blank']}
