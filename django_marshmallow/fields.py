@@ -14,10 +14,7 @@ class DJMFieldMixin:
 
     def __init__(self, **kwargs):
         self.model_field = kwargs.pop('model_field', None)
-        self.allow_blank = kwargs.pop('allow_blank', False)
         super().__init__(**kwargs)
-        if not self.allow_blank and self.__class__.__name__ in ('String', ):  #FixMe more beauty way
-            self.validators.append(self.DJANGO_VALIDATORS.get('allow_blank'))
 
 
 class Mapping(DJMFieldMixin, ma.fields.Mapping):
@@ -37,7 +34,11 @@ class Tuple(DJMFieldMixin, ma.fields.Tuple):
 
 
 class String(DJMFieldMixin, ma.fields.String):
-    pass
+    def __init__(self, **kwargs):
+        self.allow_blank = kwargs.pop('allow_blank', False)
+        super().__init__(**kwargs)
+        if not self.allow_blank:
+            self.validators.append(self.DJANGO_VALIDATORS.get('allow_blank'))
 
 
 class UUID(DJMFieldMixin, ma.fields.UUID):
