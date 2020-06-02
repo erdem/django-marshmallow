@@ -140,14 +140,14 @@ class ModelFieldConverter:
         relation_info = model_field_info.relations.get(field_name)
 
         if isinstance(self.opts.nested_fields, (list, tuple)):
-            related_nested_serializer = schemas.modelschema_factory(
-                relation_info.related_model,
+            related_schema_class = schemas.modelschema_factory(
+                model=relation_info.related_model,
                 fields='__all__'
             )
         elif isinstance(self.opts.nested_fields, dict):
             nested_serializer_opts = self.opts.nested_fields.get(field_name)
-            related_nested_serializer = schemas.modelschema_factory(
-                relation_info.related_model,
+            related_schema_class = schemas.modelschema_factory(
+                model=relation_info.related_model,
                 **nested_serializer_opts
             )
         else:
@@ -156,22 +156,19 @@ class ModelFieldConverter:
             )
 
         field_kwargs = self.get_related_field_kwargs(relation_info)
-        field_class = self.related_nested_class(related_nested_serializer, **field_kwargs)
+        field_class = self.related_nested_class(related_schema_class, **field_kwargs)
         return field_name, field_class
 
     def build_related_nested_field_with_depth(self, field_name, model_field_info, nested_depth):
-        from django_marshmallow.schemas import ModelSchema
-
         relation_info = model_field_info.relations.get(field_name)
-
-        class RelatedModelSerializer(ModelSchema):  # Fixme: rid of this
-            class Meta:
-                model = relation_info.related_model
-                fields = '__all__'
-                depth = nested_depth - 1
-
+        related_schema_depth = nested_depth - 1
+        related_schema_class = schemas.modelschema_factory(
+            relation_info.related_model,
+            fields=schemas.ALL_FIELDS,
+            depth=related_schema_depth
+        )
         field_kwargs = self.get_related_field_kwargs(relation_info)
-        field_class = self.related_nested_class(RelatedModelSerializer, **field_kwargs)
+        field_class = self.related_nested_class(related_schema_class, **field_kwargs)
         return field_name, field_class
 
     def build_related_field(self, field_name, model_field_info):
