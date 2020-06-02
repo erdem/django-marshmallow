@@ -1,10 +1,12 @@
+from django.core.exceptions import ImproperlyConfigured
 from django.db import models
 from django.utils.text import capfirst
 
 from marshmallow import validate
 
-from django_marshmallow import fields
+from django_marshmallow import fields, schemas
 from django_marshmallow.utils import get_field_info
+
 
 
 class ModelFieldConverter:
@@ -60,6 +62,7 @@ class ModelFieldConverter:
     def fields_for_model(self):
         model = self.opts.model
         schema_fields = self.opts.fields
+        schema_nested_fields = self.opts.nested_fields
         exclude = self.opts.exclude
         include_pk = self.opts.include_pk
         nested_depth = self.opts.depth
@@ -86,11 +89,16 @@ class ModelFieldConverter:
 
             relation_info = model_field_info.relations.get(field_name)
             if relation_info:
-                if relation_info.reverse:
+                if relation_info.reverse:  # todo: support reverse relations
                     continue
 
-                if nested_depth:
+                if field_name in schema_nested_fields:
                     model_schema_field = self.build_related_nested_field(
+                        field_name,
+                        model_field_info
+                    )
+                elif nested_depth:
+                    model_schema_field = self.build_related_nested_field_with_depth(
                         field_name,
                         model_field_info,
                         nested_depth
@@ -128,7 +136,30 @@ class ModelFieldConverter:
         field_kwargs = self.get_schema_field_kwargs(model_field)
         return field_name, fields.InferredField(**field_kwargs)
 
-    def build_related_nested_field(self, field_name, model_field_info, nested_depth):
+    def build_related_nested_field(self, field_name, model_field_info):
+        relation_info = model_field_info.relations.get(field_name)
+
+        if isinstance(self.opts.nested_fields, (list, tuple)):
+            related_nested_serializer = schemas.modelschema_factory(
+                relation_info.related_model,
+                fields='__all__'
+            )
+        elif isinstance(self.opts.nested_fields, dict):
+            nested_serializer_opts = self.opts.nested_fields.get(field_name)
+            related_nested_serializer = schemas.modelschema_factory(
+                relation_info.related_model,
+                **nested_serializer_opts
+            )
+        else:
+            raise ImproperlyConfigured(
+                f'Invalid type `nested_fields` configuration for {field_name} field.'
+            )
+
+        field_kwargs = self.get_related_field_kwargs(relation_info)
+        field_class = self.related_nested_class(related_nested_serializer, **field_kwargs)
+        return field_name, field_class
+
+    def build_related_nested_field_with_depth(self, field_name, model_field_info, nested_depth):
         from django_marshmallow.schemas import ModelSchema
 
         relation_info = model_field_info.relations.get(field_name)

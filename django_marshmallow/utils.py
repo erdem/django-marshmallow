@@ -1,8 +1,5 @@
 from collections import OrderedDict, namedtuple
 
-from django.core.exceptions import ImproperlyConfigured
-
-from django_marshmallow.schemas import ModelSchema
 
 FieldInfo = namedtuple('FieldResult', [
     'pk',  # Model field instance
@@ -166,33 +163,3 @@ def is_abstract_model(model):
     Given a model class, returns a boolean True if it is abstract and False if it is not.
     """
     return hasattr(model, '_meta') and hasattr(model._meta, 'abstract') and model._meta.abstract
-
-
-def modelschema_factory(model, schema=ModelSchema, fields=None, exclude=None, **kwargs):
-    """
-        Return a ModelSchema containing schema fields for the given model.
-    """
-    attrs = {'model': model}
-    if fields is not None:
-        attrs['fields'] = fields
-    if exclude is not None:
-        attrs['exclude'] = exclude
-    attrs.update(kwargs)
-    bases = (ModelSchema.Meta,) if hasattr(ModelSchema, 'Meta') else ()
-    Meta = type('Meta', bases, attrs)
-
-    # Give this new Schema class a reasonable name.
-    class_name = model.__name__ + 'Schema'
-
-    # Class attributes for the new form class.
-    schema_class_attrs = {
-        'Meta': Meta,
-    }
-
-    if getattr(Meta, 'fields', None) is None and getattr(Meta, 'exclude', None) is None:
-        raise ImproperlyConfigured(
-            'Defining `nested_fields` options for a schema or calling modelschema_factory without defining "fields" or '
-            f'"exclude" explicitly is prohibited. Model: {model}'
-        )
-
-    return type(schema)(class_name, (schema,), schema_class_attrs)

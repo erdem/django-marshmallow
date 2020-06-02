@@ -6,7 +6,7 @@ from django.db import models
 from django.utils.functional import cached_property
 from marshmallow.schema import SchemaMeta, SchemaOpts
 
-from marshmallow import Schema, types
+from marshmallow import Schema
 
 from django_marshmallow.converter import ModelFieldConverter
 from django_marshmallow.fields import RelatedField, RelatedNested
@@ -28,6 +28,11 @@ class ModelSchemaOpts(SchemaOpts):
         super(ModelSchemaOpts, self).__init__(meta, ordered)
         if fields == ALL_FIELDS:
             self.fields = ALL_FIELDS
+
+        self.nested_fields = getattr(meta, 'nested_fields', ())
+
+        if not isinstance(self.nested_fields, (list, tuple, dict)):
+            raise ValueError("`nested_fields` option must be a list, tuple or dict.")
 
         self.model_converter = getattr(meta, 'model_converter', ModelFieldConverter)
         self.depth = getattr(meta, 'depth', None)
@@ -219,3 +224,33 @@ class BaseModelSchema(Schema, metaclass=ModelSchemaMetaclass):
 
 class ModelSchema(BaseModelSchema):
     pass
+
+
+def modelschema_factory(model, schema=ModelSchema, fields=None, exclude=None, **kwargs):
+    """
+        Return a ModelSchema containing schema fields for the given model.
+    """
+    attrs = {'model': model}
+    if fields is not None:
+        attrs['fields'] = fields
+    if exclude is not None:
+        attrs['exclude'] = exclude
+    attrs.update(kwargs)
+    bases = (ModelSchema.Meta,) if hasattr(ModelSchema, 'Meta') else ()
+    Meta = type('Meta', bases, attrs)
+
+    # Give this new Schema class a reasonable name.
+    class_name = model.__name__ + 'Schema'
+
+    # Class attributes for the new form class.
+    schema_class_attrs = {
+        'Meta': Meta,
+    }
+
+    if getattr(Meta, 'fields', None) is None and getattr(Meta, 'exclude', None) is None:
+        raise ImproperlyConfigured(
+            'Defining `nested_fields` options for a schema or calling modelschema_factory without defining "fields" or '
+            f'"exclude" explicitly is prohibited. Model: {model}'
+        )
+
+    return type(schema)(class_name, (schema,), schema_class_attrs)
