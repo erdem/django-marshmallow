@@ -54,18 +54,20 @@ class ModelFieldConverter:
         self.schema_cls = schema_cls
         self.opts = schema_cls.opts
         self.dict_cls = dict_cls
-        self._is_related_field_schema = self.opts._related_field_schema
 
     def is_standard_field(self, model_field):
         return model_field.__class__ in self.SCHEMA_FIELD_MAPPING
 
-    def fields_for_model(self):
+    def fields_for_model(self, declared_fields=None):
         model = self.opts.model
         schema_fields = self.opts.fields
         schema_nested_fields = self.opts.nested_fields
         exclude = self.opts.exclude
         include_pk = self.opts.include_pk
         nested_depth = self.opts.depth
+
+        if not declared_fields:
+            declared_fields = ()
 
         model_field_info = get_field_info(model)
         field_list = []
@@ -76,7 +78,11 @@ class ModelFieldConverter:
                 model_field=self.schema_cls.model_pk_field
             )
             field_list.append(pk_field)
+
         for field_name, model_field in model_field_info.all_fields.items():
+
+            if field_name in declared_fields:
+                continue
 
             if schema_fields is not None and field_name not in schema_fields:
                 continue
@@ -221,7 +227,7 @@ class ModelFieldConverter:
         validator_kwarg = list(model_field.validators)
         kwargs['model_field'] = model_field
 
-        if model_field.primary_key and not self._is_related_field_schema:
+        if model_field.primary_key:
             kwargs['required'] = False
             return kwargs
 

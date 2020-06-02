@@ -39,7 +39,6 @@ class ModelSchemaOpts(SchemaOpts):
         self.ordered = getattr(meta, 'ordered', True)
         self.include_pk = getattr(meta, 'include_pk', True)
         self.expand_related_pk_fields = getattr(meta, 'expand_related_pk_fields', True)
-        self._related_field_schema = getattr(meta, '_related_field_schema', False)
 
 
 class ModelSchemaMetaclass(SchemaMeta):
@@ -60,7 +59,6 @@ class ModelSchemaMetaclass(SchemaMeta):
         exclude = opts.exclude
         model = opts.model
         include_pk = opts.include_pk
-        _related_field_schema = opts._related_field_schema
 
         if not model:
             raise ImproperlyConfigured(
@@ -73,7 +71,7 @@ class ModelSchemaMetaclass(SchemaMeta):
                 '`model` option must be a Django model class'
             )
 
-        if not fields and not exclude and not _related_field_schema:
+        if not fields and not exclude:
             raise ImproperlyConfigured(
                 'Creating a ModelSchema without either `Meta.fields` attribute '
                 'or `Meta.exclude` attribute is prohibited; %s '
@@ -124,7 +122,7 @@ class ModelSchemaMetaclass(SchemaMeta):
         declared_fields = super().get_declared_fields(
             klass, cls_fields, inherited_fields, dict_cls
         )
-        fields = converter.fields_for_model()
+        fields = converter.fields_for_model(declared_fields)
         fields.update(declared_fields)
         return fields
 

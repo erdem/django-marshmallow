@@ -378,7 +378,8 @@ def test_nested_schema_validations(db, db_models):
 
 def test_string_allow_blank_validation(db_models):
     class TestSchema(ModelSchema):
-        
+        char_field = fields.String()
+
         class Meta:
             model = db_models.DataFieldsModel
             fields = ('char_field', 'text_field', 'text_field_blank_true')
