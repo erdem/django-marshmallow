@@ -4,18 +4,118 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 
 import marshmallow as ma
-from marshmallow import ValidationError
-from marshmallow.fields import *
+from marshmallow import ValidationError, validate
 
 
-class InferredField(ma.fields.Inferred):
+class DJMFieldMixin:
+    DJANGO_VALIDATORS = {
+        'allow_blank': validate.Length(min=1, error='Field cannot be blank')
+    }
 
     def __init__(self, **kwargs):
-        self.model_field = kwargs.get('model_field')
-        super().__init__()
+        self.model_field = kwargs.pop('model_field', None)
+        self.allow_blank = kwargs.pop('allow_blank', False)
+        super().__init__(**kwargs)
+        if self.allow_blank:
+            self.validators.append(self.DJANGO_VALIDATORS.get('allow_blank'))
 
-    def _serialize(self, value, attr, obj, **kwargs):
-        return super()._serialize(value, attr, obj, **kwargs)
+
+class Mapping(DJMFieldMixin, ma.fields.Mapping):
+    pass
+
+
+class Dict(DJMFieldMixin, ma.fields.Dict):
+    pass
+
+
+class List(DJMFieldMixin, ma.fields.List):
+    pass
+
+
+class Tuple(DJMFieldMixin, ma.fields.Tuple):
+    pass
+
+
+class String(DJMFieldMixin, ma.fields.String):
+    pass
+
+
+class UUID(DJMFieldMixin, ma.fields.UUID):
+    pass
+
+
+class Number(DJMFieldMixin, ma.fields.Number):
+    pass
+
+
+class Integer(DJMFieldMixin, ma.fields.Integer):
+    pass
+
+
+class Decimal(DJMFieldMixin, ma.fields.Decimal):
+    pass
+
+
+class Boolean(DJMFieldMixin, ma.fields.Boolean):
+    pass
+
+
+class Float(DJMFieldMixin, ma.fields.Float):
+    pass
+
+
+class DateTime(DJMFieldMixin, ma.fields.DateTime):
+    pass
+
+
+class NaiveDateTime(DJMFieldMixin, ma.fields.NaiveDateTime):
+    pass
+
+
+class AwareDateTime(DJMFieldMixin, ma.fields.AwareDateTime):
+    pass
+
+
+class Time(DJMFieldMixin, ma.fields.Time):
+    pass
+
+
+class Date(DJMFieldMixin, ma.fields.Date):
+    pass
+
+
+class TimeDelta(DJMFieldMixin, ma.fields.TimeDelta):
+    pass
+
+
+class Url(DJMFieldMixin, ma.fields.Url):
+    pass
+
+
+class Email(DJMFieldMixin, ma.fields.Email):
+    pass
+
+
+class Method(DJMFieldMixin, ma.fields.Method):
+    pass
+
+
+class Function(DJMFieldMixin, ma.fields.Function):
+    pass
+
+
+class Constant(DJMFieldMixin, ma.fields.Constant):
+    pass
+
+
+class Pluck(DJMFieldMixin, ma.fields.Pluck):
+    pass
+
+
+class InferredField(DJMFieldMixin, ma.fields.Inferred):
+
+    def __init__(self, **kwargs):
+        super().__init__()
 
 
 class FileField(InferredField):
@@ -49,6 +149,15 @@ class IPAddressField(InferredField):
 class SlugField(InferredField):
     pass
 
+
+
+# Aliases
+URL = Url
+Str = String
+Bool = Boolean
+Int = Integer
+
+### Related fields
 
 class RelatedPKField(ma.fields.Field):
 
