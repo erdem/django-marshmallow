@@ -1,5 +1,8 @@
 from collections import OrderedDict, namedtuple
 
+from django.core.exceptions import ImproperlyConfigured
+
+from django_marshmallow.schemas import ModelSchema
 
 FieldInfo = namedtuple('FieldResult', [
     'pk',  # Model field instance
@@ -167,8 +170,8 @@ def is_abstract_model(model):
 
 def construct_instance(form, instance, fields=None, exclude=None):
     """
-    Construct and return a model instance from the bound ``schema``'s
-    ``validated_data``, but do not save the returned instance to the database.
+    Construct and return a model instance from the bound ``form``'s
+    ``cleaned_data``, but do not save the returned instance to the database.
     """
     from django.db import models
     opts = instance._meta
@@ -199,3 +202,33 @@ def construct_instance(form, instance, fields=None, exclude=None):
         f.save_form_data(instance, cleaned_data[f.name])
 
     return instance
+
+
+def modelschema_factory(model, schema=ModelSchema, fields=None, exclude=None, **kwargs):
+    """
+        Return a ModelSchema containing schema fields for the given model.
+    """
+    attrs = {'model': model}
+    if fields is not None:
+        attrs['fields'] = fields
+    if exclude is not None:
+        attrs['exclude'] = exclude
+    attrs.update(kwargs)
+    bases = (ModelSchema.Meta,) if hasattr(ModelSchema, 'Meta') else ()
+    Meta = type('Meta', bases, attrs)
+
+    # Give this new Schema class a reasonable name.
+    class_name = model.__name__ + 'Schema'
+
+    # Class attributes for the new form class.
+    schema_class_attrs = {
+        'Meta': Meta,
+    }
+
+    if getattr(Meta, 'fields', None) is None and getattr(Meta, 'exclude', None) is None:
+        raise ImproperlyConfigured(
+            'Defining `nested_fields` options for a schema or calling modelschema_factory without defining "fields" or '
+            f'"exclude" explicitly is prohibited. Model: {model}'
+        )
+
+    return type(schema)(class_name, (schema,), schema_class_attrs)
