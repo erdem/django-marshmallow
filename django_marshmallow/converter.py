@@ -198,25 +198,28 @@ class ModelFieldConverter:
             return kwargs
 
         if not model_field.blank or not model_field.null:
-            kwargs['required'] = True  # required=False for all fields by default on marshmallow
+            kwargs['required'] = True
+
         if model_field.null:
             kwargs['allow_none'] = True
+
         if model_field.validators:
             kwargs['validate'] = model_field.validators
+
         if not model_field.editable:
             kwargs['dump_only'] = True
+
+        if model_field.blank and (isinstance(model_field, (models.CharField, models.TextField))):
+            kwargs['allow_blank'] = True
+
+        if model_field.null and not isinstance(model_field, models.NullBooleanField):
+            kwargs['allow_none'] = True
 
         if model_field.verbose_name:
             metadata['label'] = capfirst(model_field.verbose_name)
 
         if model_field.help_text:
             metadata['help_text'] = model_field.help_text
-
-        if model_field.blank and (isinstance(model_field, (models.CharField, models.TextField))):
-            metadata['allow_blank'] = True
-
-        if model_field.null and not isinstance(model_field, models.NullBooleanField):
-            kwargs['allow_none'] = True
 
         if model_field.choices:
             validator_kwarg.append(validate.OneOf(choices=model_field.choices))
