@@ -46,7 +46,7 @@ def test_invalid_primary_key_validation_for_foreign_key_fields(db, db_models, fk
     class TestSchema(ModelSchema):
         class Meta:
             model = db_models.AllRelatedFieldsModel
-            fields = ('foreign_key_field', )
+            fields = ('foreign_key_field',)
 
     schema = TestSchema()
 
@@ -127,11 +127,10 @@ def test_invalid_primary_key_validation_for_foreign_key_fields(db, db_models, fk
 
 
 def test_invalid_primary_key_validation_for_many_to_many_fields(db, db_models, m2m_related_instances):
-
     class TestSchema(ModelSchema):
         class Meta:
             model = db_models.AllRelatedFieldsModel
-            fields = ('many_to_many_field', )
+            fields = ('many_to_many_field',)
 
     schema = TestSchema()
 
@@ -205,8 +204,8 @@ def test_invalid_primary_key_validation_for_many_to_many_fields(db, db_models, m
 
     assert len(errors) > 0
     assert errors['many_to_many_field'] == [{'uuid': ['`many_to_many_field` related field entity does not exists for '
-           f'"{uuid_1}, '
-           f'{uuid_2}" on ManyToManyTarget']}]
+                                                      f'"{uuid_1}, '
+                                                      f'{uuid_2}" on ManyToManyTarget']}]
 
     uuid_1 = str(uuid.uuid4())
     uuid_2 = str(uuid.uuid4())
@@ -226,8 +225,8 @@ def test_invalid_primary_key_validation_for_many_to_many_fields(db, db_models, m
 
     assert len(errors) > 0
     assert errors['many_to_many_field'] == [{'pk': ['`many_to_many_field` related field entity does not exists for '
-           f'"{uuid_1}, '
-           f'{uuid_2}" on ManyToManyTarget']}]
+                                                    f'"{uuid_1}, '
+                                                    f'{uuid_2}" on ManyToManyTarget']}]
 
     # test valid datas
     validate_data = {
@@ -265,7 +264,7 @@ def test_invalid_primary_key_validation_for_one_to_one_fields(db, db_models, o2o
     class TestSchema(ModelSchema):
         class Meta:
             model = db_models.AllRelatedFieldsModel
-            fields = ('one_to_one_field', )
+            fields = ('one_to_one_field',)
 
     schema = TestSchema()
 
@@ -323,7 +322,7 @@ def test_invalid_primary_key_validation_for_one_to_one_fields(db, db_models, o2o
 
     assert len(errors) > 0
     assert errors['one_to_one_field'] == {'pk': ['`one_to_one_field` related field entity does not exists for '
-        f'"{uuid_pk}" on OneToOneTarget']}
+                                                 f'"{uuid_pk}" on OneToOneTarget']}
 
     # test valid datas
 
@@ -348,7 +347,6 @@ def test_invalid_primary_key_validation_for_one_to_one_fields(db, db_models, o2o
 
 def test_explicit_nested_schema_validations(db, db_models):
     class ForeignKeySchema(ModelSchema):
-
         class Meta:
             model = db_models.ForeignKeyTarget
             fields = ('id', 'name')
@@ -378,13 +376,12 @@ def test_explicit_nested_schema_validations(db, db_models):
 
 def test_implicit_nested_fields_schema_validations(db, db_models):
     class TestFKSchema(ModelSchema):
-
         class Meta:
             model = db_models.AllRelatedFieldsModel
             fields = ('name', 'foreign_key_field')
-            # `nested_fields` option auto generating nested schema
 
-            nested_fields = ('foreign_key_field', )
+            # `nested_fields` option auto generating nested schema
+            nested_fields = ('foreign_key_field',)
 
     assert db_models.AllRelatedFieldsModel.objects.count() == 0
 
@@ -398,13 +395,12 @@ def test_implicit_nested_fields_schema_validations(db, db_models):
     schema = TestFKSchema()
     errors = schema.validate(validate_data)
 
-    assert len(errors) > 0
+    assert len(errors) == 1
     assert errors['foreign_key_field']['name'] == ['Field may not be null.']
 
     # more complex usage
 
     class TestM2MSchema(ModelSchema):
-
         class Meta:
             model = db_models.AllRelatedFieldsModel
             fields = ('name', 'many_to_many_field')
@@ -429,7 +425,41 @@ def test_implicit_nested_fields_schema_validations(db, db_models):
 
     schema = TestM2MSchema()
     errors = schema.validate(validate_data)
+    assert len(errors) == 1
     assert errors['many_to_many_field'] == {0: {'name': ['Field may not be null.']}}
+
+    # `nested_fields` option can generate multi level nested schema field
+
+    class TestM2MSchema(ModelSchema):
+        class Meta:
+            model = db_models.AllRelatedFieldsModel
+            fields = ('name', 'many_to_many_field')
+
+            nested_fields = {
+                'many_to_many_field': {
+                    'fields': ('uuid', 'name', 'second_depth_relation_field'),
+                    'nested_fields': ('second_depth_relation_field', )
+                }
+            }
+
+    uuid_pk = str(uuid.uuid4())
+    validate_data = {
+        'name': 'Nested Schema Test Name',
+        'many_to_many_field': [
+            {
+                'uuid': uuid_pk,
+                'name': 'M2M first level name',
+                'second_depth_relation_field': {
+                    'name': None
+                }
+            }
+        ]
+    }
+
+    schema = TestM2MSchema()
+    errors = schema.validate(validate_data)
+    assert len(errors) == 1
+    assert errors['many_to_many_field'] == {0: {'second_depth_relation_field': {'name': ['Field may not be null.']}}}
 
 
 def test_string_allow_blank_validation(db_models):

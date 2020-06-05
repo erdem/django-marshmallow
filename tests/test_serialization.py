@@ -7,6 +7,7 @@ from collections import OrderedDict
 import pytest
 from django.core.files import File
 from django.core.files.temp import NamedTemporaryFile
+from django.db import transaction
 from django.forms import model_to_dict
 
 from django_marshmallow import fields
@@ -90,7 +91,7 @@ def test_schema_serialization_with_declared_fields(db_models, data_model_obj):
     assert data['test_field'] == 123
 
 
-@pytest.fixture
+@pytest.fixture(scope='function', autouse=True)
 def all_related_obj(db, db_models):
     one_to_one_instance = db_models.OneToOneTarget(
         name='One to One'
@@ -104,9 +105,15 @@ def all_related_obj(db, db_models):
         name='Many to Many 1'
     )
     many_to_many_instance_1.save()
-    many_to_many_instance_2 = db_models.ManyToManyTarget(
-        name='Many to Many 2'
+
+    m2m_foreign_key_instnace = db_models.ForeignKeyTarget(
+        name='Second level relation'
     )
+    m2m_foreign_key_instnace.save()
+    many_to_many_instance_2 = db_models.ManyToManyTarget(
+        name='Many to Many 2',
+    )
+    many_to_many_instance_2.second_depth_relation_field = m2m_foreign_key_instnace
     many_to_many_instance_2.save()
 
     many_to_many_instances = [
@@ -118,8 +125,12 @@ def all_related_obj(db, db_models):
         one_to_one_field=one_to_one_instance,
         foreign_key_field = foreign_key_instnace
     )
-    all_related_obj.save()
-    all_related_obj.many_to_many_field.set(many_to_many_instances)
+
+    with transaction.atomic():
+        all_related_obj.save()
+        all_related_obj.many_to_many_field.set(many_to_many_instances)
+
+    all_related_obj = db_models.AllRelatedFieldsModel.objects.get(pk=all_related_obj.pk)
     return all_related_obj
 
 
@@ -165,8 +176,57 @@ def test_schema_serialization_with_nested_schema(db_models, all_related_obj):
     assert isinstance(data['many_to_many_field'], list) is True
 
     assert data['many_to_many_field'][0]['uuid'] == str(all_related_obj.many_to_many_field.all()[0].uuid)
-    assert data['many_to_many_field'][1]['name'] == str(all_related_obj.many_to_many_field.all()[1].name)
+    assert data['many_to_many_field'][0]['name'] == str(all_related_obj.many_to_many_field.all()[0].name)
     assert data['many_to_many_field'][1]['uuid'] == str(all_related_obj.many_to_many_field.all()[1].uuid)
     assert data['many_to_many_field'][1]['name'] == str(all_related_obj.many_to_many_field.all()[1].name)
 
 
+def test_implicit_nested_fields_schema(db, db_models, all_related_obj):
+    class TestSchema(ModelSchema):
+
+        class Meta:
+            model = db_models.AllRelatedFieldsModel
+            fields = ('name', 'many_to_many_field')
+            nested_fields = {
+                'many_to_many_field': {
+                    'fields': ('uuid', 'name')
+                }
+            }
+
+    schema = TestSchema()
+    data = schema.dump(all_related_obj)
+
+    assert isinstance(data['many_to_many_field'], list) is True
+
+    assert data['many_to_many_field'][0]['uuid'] == str(all_related_obj.many_to_many_field.all()[0].uuid)
+    assert data['many_to_many_field'][0]['name'] == str(all_related_obj.many_to_many_field.all()[0].name)
+    assert data['many_to_many_field'][1]['uuid'] == str(all_related_obj.many_to_many_field.all()[1].uuid)
+    assert data['many_to_many_field'][1]['name'] == str(all_related_obj.many_to_many_field.all()[1].name)
+
+    # Test multi-level `nested_fields` serialization
+
+    class TestSchema(ModelSchema):
+
+        class Meta:
+            model = db_models.AllRelatedFieldsModel
+            fields = ('name', 'many_to_many_field')
+            nested_fields = {
+                'many_to_many_field': {
+                    'fields': ('uuid', 'name', 'second_depth_relation_field'),
+                    'nested_fields': ('second_depth_relation_field', )
+                }
+            }
+
+    schema = TestSchema()
+    data = schema.dump(all_related_obj)
+
+    assert isinstance(data['many_to_many_field'], list) is True
+
+    assert data['many_to_many_field'][0]['uuid'] == str(all_related_obj.many_to_many_field.all()[0].uuid)
+    assert data['many_to_many_field'][0]['name'] == str(all_related_obj.many_to_many_field.all()[0].name)
+    assert data['many_to_many_field'][1]['uuid'] == str(all_related_obj.many_to_many_field.all()[1].uuid)
+    assert data['many_to_many_field'][1]['name'] == str(all_related_obj.many_to_many_field.all()[1].name)
+
+    # `second_depth_relation_field` is a NestedSchema
+    assert isinstance(data['many_to_many_field'][0]['second_depth_relation_field'], dict) is True
+    assert data['many_to_many_field'][0]['second_depth_relation_field']['name'] == 'Second level relation'
