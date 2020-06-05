@@ -346,7 +346,7 @@ def test_invalid_primary_key_validation_for_one_to_one_fields(db, db_models, o2o
     assert len(errors) == 0
 
 
-def test_nested_schema_validations(db, db_models):
+def test_explicit_nested_schema_validations(db, db_models):
     class ForeignKeySchema(ModelSchema):
 
         class Meta:
@@ -374,6 +374,62 @@ def test_nested_schema_validations(db, db_models):
 
     assert len(errors) > 0
     assert errors['foreign_key_field']['name'] == ['Field may not be null.']
+
+
+def test_implicit_nested_fields_schema_validations(db, db_models):
+    class TestFKSchema(ModelSchema):
+
+        class Meta:
+            model = db_models.AllRelatedFieldsModel
+            fields = ('name', 'foreign_key_field')
+            # `nested_fields` option auto generating nested schema
+
+            nested_fields = ('foreign_key_field', )
+
+    assert db_models.AllRelatedFieldsModel.objects.count() == 0
+
+    validate_data = {
+        'name': 'Nested Schema Test Name',
+        'foreign_key_field': {
+            'name': None
+        }
+    }
+
+    schema = TestFKSchema()
+    errors = schema.validate(validate_data)
+
+    assert len(errors) > 0
+    assert errors['foreign_key_field']['name'] == ['Field may not be null.']
+
+    # more complex usage
+
+    class TestM2MSchema(ModelSchema):
+
+        class Meta:
+            model = db_models.AllRelatedFieldsModel
+            fields = ('name', 'many_to_many_field')
+
+            # `nested_fields` option can include nested schema options
+            nested_fields = {
+                'many_to_many_field': {
+                    'fields': ('uuid', 'name')
+                }
+            }
+
+    uuid_pk = str(uuid.uuid4())
+    validate_data = {
+        'name': 'Nested Schema Test Name',
+        'many_to_many_field': [
+            {
+                'uuid': uuid_pk,
+                'name': None
+            }
+        ]
+    }
+
+    schema = TestM2MSchema()
+    errors = schema.validate(validate_data)
+    assert errors['many_to_many_field'] == {0: {'name': ['Field may not be null.']}}
 
 
 def test_string_allow_blank_validation(db_models):
