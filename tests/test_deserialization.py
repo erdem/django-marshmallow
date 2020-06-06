@@ -176,3 +176,76 @@ def test_related_nested_fields_deserialization(
     assert isinstance(o2o_instance, db_models.OneToOneTarget) is True
     assert o2o_instance.uuid is not None
     assert o2o_instance._state.adding is True
+
+
+def test_implicit_related_nested_fields_deserialization(
+        db,
+        db_models
+):
+    """
+        Load a schema has related nested fields. Do not call save method of the schema.
+    """
+    db_models.AllRelatedFieldsModel.objects.all().delete()
+
+    class TestSchema(ModelSchema):
+
+        class Meta:
+            model = db_models.AllRelatedFieldsModel
+            fields = ('name', 'foreign_key_field', 'many_to_many_field', 'one_to_one_field')
+            nested_fields = {
+                'foreign_key_field': {
+                    'fields': ('id', 'name')
+                },
+                'many_to_many_field': {
+                    'fields': ('name',)
+                },
+                'one_to_one_field': {
+                    'fields': ('uuid', 'name')
+                }
+            }
+
+    schema = TestSchema()
+
+    load_data = {
+        'name': 'Related Nested Instance',
+        'foreign_key_field': {
+            'name': 'foreign instance name'
+        },
+        'one_to_one_field': {
+            'name': 'O2O instance name'
+        },
+        'many_to_many_field': [
+            {
+                'name': 'M2M instance 1'
+            },
+            {
+                'name': 'M2M instance 2'
+            }
+        ]
+    }
+
+    deserialized_data = schema.load(load_data)
+
+    # check instance didn't call save mehtod when deserializing data
+    assert db_models.ForeignKeyTarget.objects.all().count() == 0
+    assert db_models.ManyToManyTarget.objects.all().count() == 0
+    assert db_models.OneToOneTarget.objects.all().count() == 0
+    assert db_models.AllRelatedFieldsModel.objects.all().count() == 0
+
+    assert deserialized_data['name'] == load_data['name']
+    fk_instance = deserialized_data['foreign_key_field']
+    assert isinstance(fk_instance, db_models.ForeignKeyTarget) is True
+    assert fk_instance.pk is None
+
+    m2m_instnaces = deserialized_data['many_to_many_field']
+    assert all([isinstance(m, db_models.ManyToManyTarget) for m in m2m_instnaces]) is True
+
+    # Django instance won't `None` if there is a custom primary key field
+    assert all([m.pk is not None for m in m2m_instnaces]) is True
+    # check instance state to find out object is saved
+    assert all([m._state.adding is True for m in m2m_instnaces]) is True
+
+    o2o_instance = deserialized_data['one_to_one_field']
+    assert isinstance(o2o_instance, db_models.OneToOneTarget) is True
+    assert o2o_instance.uuid is not None
+    assert o2o_instance._state.adding is True
