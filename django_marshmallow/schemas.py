@@ -32,7 +32,11 @@ class ModelSchemaOpts(SchemaOpts):
         self.nested_fields = getattr(meta, 'nested_fields', ())
 
         if not isinstance(self.nested_fields, (list, tuple, dict)):
-            raise ValueError("`nested_fields` option must be a list, tuple or dict.")
+            raise ValueError('`nested_fields` option must be a list, tuple or dict.')
+
+        self.order_by = getattr(meta, 'order_by', ())
+        if not isinstance(self.order_by, (list, tuple)):
+            raise ValueError("`order_by` schema option must be a list or tuple.")
 
         self.model_converter = getattr(meta, 'model_converter', ModelFieldConverter)
         self.depth = getattr(meta, 'depth', None)
@@ -158,6 +162,8 @@ class BaseModelSchema(Schema, metaclass=ModelSchemaMetaclass):
     def _serialize(self, obj, many=False, *args, **kwargs):
         if many and isinstance(obj, models.Manager):
             obj = obj.get_queryset()
+            if self.opts.order_by:
+                obj = obj.order_by(*self.opts.order_by)
         return super()._serialize(obj, many=many)
 
     @property

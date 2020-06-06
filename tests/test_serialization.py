@@ -195,6 +195,7 @@ def test_schema_serialization_with_nested_schema(db_models, all_related_obj):
         class Meta:
             model = db_models.ManyToManyTarget
             fields = ('uuid', 'name')
+            order_by = ('-created_at',)
 
     class TestSchema(ModelSchema):
         many_to_many_field = fields.RelatedNested(M2MSchema, many=True)
@@ -207,11 +208,11 @@ def test_schema_serialization_with_nested_schema(db_models, all_related_obj):
     data = schema.dump(all_related_obj)
 
     assert isinstance(data['many_to_many_field'], list) is True
-
-    assert data['many_to_many_field'][0]['uuid'] == str(all_related_obj.many_to_many_field.all()[0].uuid)
-    assert data['many_to_many_field'][0]['name'] == str(all_related_obj.many_to_many_field.all()[0].name)
-    assert data['many_to_many_field'][1]['uuid'] == str(all_related_obj.many_to_many_field.all()[1].uuid)
-    assert data['many_to_many_field'][1]['name'] == str(all_related_obj.many_to_many_field.all()[1].name)
+    m2m_queryset = all_related_obj.many_to_many_field.all().order_by('-created_at')
+    assert data['many_to_many_field'][0]['uuid'] == str(m2m_queryset[0].uuid)
+    assert data['many_to_many_field'][0]['name'] == str(m2m_queryset[0].name)
+    assert data['many_to_many_field'][1]['uuid'] == str(m2m_queryset[1].uuid)
+    assert data['many_to_many_field'][1]['name'] == str(m2m_queryset[1].name)
 
 
 def test_implicit_nested_fields_schema(db, db_models, all_related_obj):
@@ -222,19 +223,22 @@ def test_implicit_nested_fields_schema(db, db_models, all_related_obj):
             fields = ('name', 'many_to_many_field')
             nested_fields = {
                 'many_to_many_field': {
-                    'fields': ('uuid', 'name')
+                    'fields': ('uuid', 'name'),
+                    'order_by': ('-created_at',)
                 }
             }
 
     schema = TestSchema()
     data = schema.dump(all_related_obj)
 
+    m2m_queryset = all_related_obj.many_to_many_field.all().order_by('-created_at')
+
     assert isinstance(data['many_to_many_field'], list) is True
 
-    assert data['many_to_many_field'][0]['uuid'] == str(all_related_obj.many_to_many_field.all()[0].uuid)
-    assert data['many_to_many_field'][0]['name'] == str(all_related_obj.many_to_many_field.all()[0].name)
-    assert data['many_to_many_field'][1]['uuid'] == str(all_related_obj.many_to_many_field.all()[1].uuid)
-    assert data['many_to_many_field'][1]['name'] == str(all_related_obj.many_to_many_field.all()[1].name)
+    assert data['many_to_many_field'][0]['uuid'] == str(m2m_queryset[0].uuid)
+    assert data['many_to_many_field'][0]['name'] == str(m2m_queryset[0].name)
+    assert data['many_to_many_field'][1]['uuid'] == str(m2m_queryset[1].uuid)
+    assert data['many_to_many_field'][1]['name'] == str(m2m_queryset[1].name)
 
     # Test multi-level `nested_fields` serialization
 
@@ -246,7 +250,8 @@ def test_implicit_nested_fields_schema(db, db_models, all_related_obj):
             nested_fields = {
                 'many_to_many_field': {
                     'fields': ('uuid', 'name', 'second_depth_relation_field'),
-                    'nested_fields': ('second_depth_relation_field', )
+                    'nested_fields': ('second_depth_relation_field', ),
+                    'order_by': ('-created_at',)
                 }
             }
 
@@ -255,10 +260,10 @@ def test_implicit_nested_fields_schema(db, db_models, all_related_obj):
 
     assert isinstance(data['many_to_many_field'], list) is True
 
-    assert data['many_to_many_field'][0]['uuid'] == str(all_related_obj.many_to_many_field.all()[0].uuid)
-    assert data['many_to_many_field'][0]['name'] == str(all_related_obj.many_to_many_field.all()[0].name)
-    assert data['many_to_many_field'][1]['uuid'] == str(all_related_obj.many_to_many_field.all()[1].uuid)
-    assert data['many_to_many_field'][1]['name'] == str(all_related_obj.many_to_many_field.all()[1].name)
+    assert data['many_to_many_field'][0]['uuid'] == str(m2m_queryset[0].uuid)
+    assert data['many_to_many_field'][0]['name'] == str(m2m_queryset[0].name)
+    assert data['many_to_many_field'][1]['uuid'] == str(m2m_queryset[1].uuid)
+    assert data['many_to_many_field'][1]['name'] == str(m2m_queryset[1].name)
 
     # `second_depth_relation_field` is a NestedSchema
     assert isinstance(data['many_to_many_field'][0]['second_depth_relation_field'], dict) is True
