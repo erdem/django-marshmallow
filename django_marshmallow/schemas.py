@@ -39,6 +39,7 @@ class ModelSchemaOpts(SchemaOpts):
         self.ordered = getattr(meta, 'ordered', True)
         self.include_pk = getattr(meta, 'include_pk', True)
         self.expand_related_pk_fields = getattr(meta, 'expand_related_pk_fields', True)
+        self.show_select_options = getattr(meta, 'show_select_options', False)
 
 
 class ModelSchemaMetaclass(SchemaMeta):

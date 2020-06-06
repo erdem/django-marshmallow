@@ -1,4 +1,5 @@
 import typing
+from collections import OrderedDict
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
@@ -39,6 +40,31 @@ class String(DJMFieldMixin, ma.fields.String):
         super().__init__(**kwargs)
         if not self.allow_blank:
             self.validators.append(self.DJANGO_VALIDATORS.get('allow_blank'))
+
+
+class ChoiceField(String):
+
+    def __init__(self, choices, **kwargs):
+        if not isinstance(choices, (list, tuple)):
+            raise ValueError(f'{self.name} `choices` must be a list or tuple.')
+
+        self.choices = choices
+        super().__init__(**kwargs)
+        if self.choices:
+            choices_dict = OrderedDict(self.choices)
+            choices_validator = validate.OneOf(choices=choices_dict.keys(), labels=choices_dict.values())
+            self.validators.append(choices_validator)
+            self.select_options = choices_validator.options()
+
+    def _serialize(self, value, attr, obj, **kwargs) -> typing.Optional[str]:
+        serialized_data = super()._serialize(value, attr, obj, **kwargs)
+        if self.choices and self.root.opts.show_select_options:
+            return {
+                'value': serialized_data,
+                'options': list(self.select_options)
+            }
+        return serialized_data
+
 
 
 class UUID(DJMFieldMixin, ma.fields.UUID):

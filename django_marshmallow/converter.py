@@ -47,6 +47,8 @@ class ModelFieldConverter:
         models.UUIDField: fields.UUID,
     }
 
+    choice_field_class = fields.ChoiceField
+
     related_pk_field_class = fields.RelatedPKField
     related_field_class = fields.RelatedField
     related_nested_class = fields.RelatedNested
@@ -126,8 +128,13 @@ class ModelFieldConverter:
 
         return self.dict_cls(field_list)
 
+    def get_schema_field_class(self, model_field):
+        if model_field.choices:
+            return self.choice_field_class
+        return self.SCHEMA_FIELD_MAPPING.get(model_field.__class__)
+
     def build_standard_field(self, field_name, model_field):
-        field_class = self.SCHEMA_FIELD_MAPPING.get(model_field.__class__)
+        field_class = self.get_schema_field_class(model_field)
         field_kwargs = self.get_schema_field_kwargs(model_field)
         return field_name, field_class(**field_kwargs)
 
@@ -257,8 +264,7 @@ class ModelFieldConverter:
             metadata['help_text'] = model_field.help_text
 
         if model_field.choices:
-            choices_dict = OrderedDict(model_field.choices)
-            field_validators.append(validate.OneOf(choices=choices_dict.keys(), labels=choices_dict.values()))
+            kwargs['choices'] = model_field.choices
 
         kwargs['validate'] = field_validators
         kwargs['metadata'] = metadata
