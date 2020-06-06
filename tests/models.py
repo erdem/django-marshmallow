@@ -108,15 +108,21 @@ class AllRelatedFieldsModel(TestAbstractModel):
     )
 
 
+class BasicChoiceFieldModel(TestAbstractModel):
+    COLOR_CHOICES = (
+        ('red', 'Red'),
+        ('blue', 'Blue'),
+        ('green', 'Green')
+    )
+
+    color = models.CharField(choices=COLOR_CHOICES, max_length=20)
+
+
 COLOR_CHOICES = (
     ('red', 'Red'),
     ('blue', 'Blue'),
     ('green', 'Green')
 )
-
-
-class BasicChoiceField(TestAbstractModel):
-    colors = models.CharField(choices=COLOR_CHOICES, max_length=20)
 
 
 class FieldOptionsModel(TestAbstractModel):

@@ -91,6 +91,39 @@ def test_schema_serialization_with_declared_fields(db_models, data_model_obj):
     assert data['test_field'] == 123
 
 
+def test_choices_field_serialization(db_models):
+    basic_choice_obj = db_models.BasicChoiceFieldModel(
+        color='red'
+    )
+    basic_choice_obj.save()
+
+    class TestSchema(ModelSchema):
+
+        class Meta:
+            model = db_models.BasicChoiceFieldModel
+            fields = ('color', )
+
+    schema = TestSchema()
+    data = schema.dump(basic_choice_obj)
+    assert len(data) == 1
+    assert data['color'] == 'red'
+
+    # test same schema with `show_select_options`
+
+    class TestSchema(ModelSchema):
+
+        class Meta:
+            model = db_models.BasicChoiceFieldModel
+            fields = ('color', )
+            show_select_options = True
+
+    schema = TestSchema()
+    data = schema.dump(basic_choice_obj)
+    assert len(data) == 1
+    assert data['color']['value'] == 'red'
+    assert data['color']['options'] == list(db_models.BasicChoiceFieldModel.COLOR_CHOICES)
+
+
 @pytest.fixture(scope='function', autouse=True)
 def all_related_obj(db, db_models):
     one_to_one_instance = db_models.OneToOneTarget(

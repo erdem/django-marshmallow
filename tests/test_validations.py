@@ -486,31 +486,37 @@ def test_choices_field_validation(db_models):
     class TestSchema(ModelSchema):
 
         class Meta:
-            model = db_models.BasicChoiceField
-            fields = ('colors', )
+            model = db_models.BasicChoiceFieldModel
+            fields = ('color', )
 
     validate_data = {
-        'colors': None,
+        'color': None,
     }
     schema = TestSchema()
     errors = schema.validate(validate_data)
 
     assert len(errors) == 1
-    assert errors['colors'] == ['Field may not be null.']
+    assert errors['color'] == ['Field may not be null.']
 
     validate_data = {
-        'colors': 'orange',
+        'color': 'orange',
     }
     schema = TestSchema()
     errors = schema.validate(validate_data)
 
     assert len(errors) == 1
-    assert errors['colors'] == ['Must be one of: red, blue, green.']
+    assert errors['color'] == ['Must be one of: red, blue, green.']
+
+    class TestSchema(ModelSchema):
+
+        class Meta:
+            model = db_models.BasicChoiceFieldModel
+            fields = ('color', )
+            show_select_options = True
 
     validate_data = {
-        'colors': 'red',
+        'color': 'red',
     }
     schema = TestSchema()
     errors = schema.validate(validate_data)
-
     assert len(errors) == 0

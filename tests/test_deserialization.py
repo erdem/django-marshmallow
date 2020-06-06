@@ -178,10 +178,7 @@ def test_related_nested_fields_deserialization(
     assert o2o_instance._state.adding is True
 
 
-def test_implicit_related_nested_fields_deserialization(
-        db,
-        db_models
-):
+def test_implicit_related_nested_fields_deserialization(db, db_models):
     """
         Load a schema has related nested fields. Do not call save method of the schema.
     """
@@ -249,3 +246,39 @@ def test_implicit_related_nested_fields_deserialization(
     assert isinstance(o2o_instance, db_models.OneToOneTarget) is True
     assert o2o_instance.uuid is not None
     assert o2o_instance._state.adding is True
+
+
+def test_choices_field_deserialization(db, db_models):
+
+    class TestSchema(ModelSchema):
+
+        class Meta:
+            model = db_models.BasicChoiceFieldModel
+            fields = ('color', )
+
+    load_data = {
+        'color': 'red'
+    }
+
+    schema = TestSchema()
+    data = schema.load(load_data)
+    assert len(data) == 1
+    assert data['color'] == 'red'
+
+    # test same schema with `show_select_options`
+
+    class TestSchema(ModelSchema):
+
+        class Meta:
+            model = db_models.BasicChoiceFieldModel
+            fields = ('color', )
+            show_select_options = True
+
+    load_data = {
+        'color': 'red'
+    }
+
+    schema = TestSchema()
+    data = schema.load(load_data)
+    assert len(data) == 1
+    assert data['color'] == 'red'
