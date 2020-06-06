@@ -480,3 +480,37 @@ def test_string_allow_blank_validation(db_models):
 
     assert len(errors) == 2
     assert errors == {'char_field': ['Field cannot be blank'], 'text_field': ['Field cannot be blank']}
+
+
+def test_choices_field_validation(db_models):
+    class TestSchema(ModelSchema):
+
+        class Meta:
+            model = db_models.BasicChoiceField
+            fields = ('colors', )
+
+    validate_data = {
+        'colors': None,
+    }
+    schema = TestSchema()
+    errors = schema.validate(validate_data)
+
+    assert len(errors) == 1
+    assert errors['colors'] == ['Field may not be null.']
+
+    validate_data = {
+        'colors': 'orange',
+    }
+    schema = TestSchema()
+    errors = schema.validate(validate_data)
+
+    assert len(errors) == 1
+    assert errors['colors'] == ['Must be one of: red, blue, green.']
+
+    validate_data = {
+        'colors': 'red',
+    }
+    schema = TestSchema()
+    errors = schema.validate(validate_data)
+
+    assert len(errors) == 0

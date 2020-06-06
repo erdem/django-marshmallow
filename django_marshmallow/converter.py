@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from django.core.exceptions import ImproperlyConfigured
 from django.db import models
 from django.utils.text import capfirst
@@ -8,11 +10,10 @@ from django_marshmallow import fields, schemas
 from django_marshmallow.utils import get_field_info
 
 
-
 class ModelFieldConverter:
     """
     Class that converts a Django model into a dictionary of corresponding
-    marshmallow `Fields <marshmallow.fields.Field>`.
+    marshmallow fields
     """
 
     SCHEMA_FIELD_MAPPING = {
@@ -224,7 +225,7 @@ class ModelFieldConverter:
     def get_schema_field_kwargs(self, model_field):
         kwargs = {}
         metadata = {}
-        validator_kwarg = list(model_field.validators)
+        field_validators = list(model_field.validators)
         kwargs['model_field'] = model_field
 
         if model_field.primary_key:
@@ -256,7 +257,9 @@ class ModelFieldConverter:
             metadata['help_text'] = model_field.help_text
 
         if model_field.choices:
-            validator_kwarg.append(validate.OneOf(choices=model_field.choices))
+            choices_dict = OrderedDict(model_field.choices)
+            field_validators.append(validate.OneOf(choices=choices_dict.keys(), labels=choices_dict.values()))
 
+        kwargs['validate'] = field_validators
         kwargs['metadata'] = metadata
         return kwargs

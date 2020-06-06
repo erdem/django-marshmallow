@@ -60,19 +60,6 @@ class DataFieldsModel(TestAbstractModel):
         return 'method'
 
 
-COLOR_CHOICES = (
-    ('red', 'Red'),
-    ('blue', 'Blue'),
-    ('green', 'Green')
-)
-
-DECIMAL_CHOICES = (
-    ('low', decimal.Decimal('0.1')),
-    ('medium', decimal.Decimal('0.5')),
-    ('high', decimal.Decimal('0.9'))
-)
-
-
 class ForeignKeyTarget(TestAbstractModel):
     name = models.CharField(max_length=255)
 
@@ -121,6 +108,17 @@ class AllRelatedFieldsModel(TestAbstractModel):
     )
 
 
+COLOR_CHOICES = (
+    ('red', 'Red'),
+    ('blue', 'Blue'),
+    ('green', 'Green')
+)
+
+
+class BasicChoiceField(TestAbstractModel):
+    colors = models.CharField(choices=COLOR_CHOICES, max_length=20)
+
+
 class FieldOptionsModel(TestAbstractModel):
     value_limit_field = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(10)])
     length_limit_field = models.CharField(validators=[MinLengthValidator(3)], max_length=12)
@@ -130,6 +128,13 @@ class FieldOptionsModel(TestAbstractModel):
     descriptive_field = models.IntegerField(help_text='Some help text', verbose_name='A label')
     choices_field = models.CharField(max_length=100, choices=COLOR_CHOICES)
     text_choices_field = models.TextField(choices=COLOR_CHOICES)
+
+
+DECIMAL_CHOICES = (
+    ('low', decimal.Decimal('0.1')),
+    ('medium', decimal.Decimal('0.5')),
+    ('high', decimal.Decimal('0.9'))
+)
 
 
 class ChoicesModel(TestAbstractModel):
@@ -148,8 +153,6 @@ class UniqueChoiceModel(TestAbstractModel):
     )
 
     name = models.CharField(max_length=254, unique=True, choices=CHOICES)
-
-
 
 
 class UUIDForeignKeyTarget(TestAbstractModel):
