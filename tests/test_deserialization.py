@@ -97,6 +97,21 @@ def test_related_pk_fields_deserialization(
     assert deserialized_data['many_to_many_field'][0].uuid == m2m_related_instance.uuid
     assert deserialized_data['one_to_one_field'].uuid == o2o_related_instance.uuid
 
+    # test without `foreign_key_field` field, it is a non-required field.
+
+    load_data = {
+        'name': 'Deserialized Instance',
+        'one_to_one_field': str(o2o_related_instance.uuid),
+        'many_to_many_field': [str(m2m_related_instance.uuid)]
+    }
+
+    deserialized_data = schema.load(load_data)
+
+    assert deserialized_data['name'] == 'Deserialized Instance'
+    assert deserialized_data['foreign_key_field'] is None
+    assert deserialized_data['many_to_many_field'][0].uuid == m2m_related_instance.uuid
+    assert deserialized_data['one_to_one_field'].uuid == o2o_related_instance.uuid
+
 
 def test_related_nested_fields_deserialization(
         db,
@@ -123,7 +138,7 @@ def test_related_nested_fields_deserialization(
             fields = ('uuid', 'name')
 
     class TestSchema(ModelSchema):
-        foreign_key_field = fields.RelatedNested(FKNestedSchema)
+        foreign_key_field = fields.RelatedNested(FKNestedSchema, required=False, allow_none=True)
         many_to_many_field = fields.RelatedNested(M2MNestedSchema, many=True)
         one_to_one_field = fields.RelatedNested(O2ONestedSchema)
 
@@ -135,9 +150,7 @@ def test_related_nested_fields_deserialization(
 
     load_data = {
         'name': 'Related Nested Instance',
-        'foreign_key_field': {
-            'name': 'foreign instance name'
-        },
+        'foreign_key_field': None,
         'one_to_one_field': {
             'name': 'O2O instance name'
         },
@@ -161,8 +174,7 @@ def test_related_nested_fields_deserialization(
 
     assert deserialized_data['name'] == load_data['name']
     fk_instance = deserialized_data['foreign_key_field']
-    assert isinstance(fk_instance, db_models.ForeignKeyTarget) is True
-    assert fk_instance.pk is None
+    assert fk_instance is None
 
     m2m_instnaces = deserialized_data['many_to_many_field']
     assert all([isinstance(m, db_models.ManyToManyTarget) for m in m2m_instnaces]) is True

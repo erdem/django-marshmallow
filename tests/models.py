@@ -98,7 +98,9 @@ class AllRelatedFieldsModel(TestAbstractModel):
     name = models.CharField(max_length=255)
     foreign_key_field = models.ForeignKey(
         ForeignKeyTarget,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
     )
     many_to_many_field = models.ManyToManyField(
         ManyToManyTarget,

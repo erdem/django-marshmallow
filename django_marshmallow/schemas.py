@@ -178,7 +178,7 @@ class BaseModelSchema(Schema, metaclass=ModelSchemaMetaclass):
         self._validated_data = super()._do_load(data, **kwargs)
         return self._validated_data
 
-    def save(self, validated_data=None):
+    def save(self, validated_data=None, commit=True):
         data = validated_data or self.validated_data
         ModelClass = self.opts.model
 

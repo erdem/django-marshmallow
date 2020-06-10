@@ -66,7 +66,6 @@ class ChoiceField(String):
         return serialized_data
 
 
-
 class UUID(DJMFieldMixin, ma.fields.UUID):
     pass
 
@@ -177,7 +176,6 @@ class SlugField(InferredField):
     pass
 
 
-
 # Aliases
 URL = Url
 Str = String
@@ -204,10 +202,12 @@ class RelatedPKField(ma.fields.Field):
             **kwargs
     ):
         super().__init__(**kwargs)
-        if not many:
-            self.related_pk_value_field = related_pk_value_field
-        else:
+        if many:
             self.related_pk_value_field = ma.fields.List(related_pk_value_field)
+            self.missing = list()
+        else:
+            self.related_pk_value_field = related_pk_value_field
+            self.missing = None
         self.model_field = model_field
         self.related_model = related_model
         self.to_field = to_field
@@ -281,6 +281,10 @@ class RelatedField(ma.fields.Field):
         self.many = many
         self.collection_type = list if many else dict
         self.related_pk_field = related_pk_field
+        if many:
+            self.missing = list()
+        else:
+            self.missing = None
         if not self.related_model:
             raise ma.exceptions.MarshmallowError(
                 'RelatedNested needs to use with a inherited class of '
@@ -364,8 +368,10 @@ class RelatedNested(ma.fields.Nested):
 
     def deserialize(self, value, attr=None, data=None, **kwargs):
         data = super().deserialize(value, attr, data, **kwargs)
-        if self.many:
-            instance = [self.related_model(**d) for d in data]
-        else:
-            instance = self.related_model(**data)
-        return instance
+        if data:
+            if self.many:
+                instance = [self.related_model(**d) for d in data]
+            else:
+                instance = self.related_model(**data)
+            return instance
+        return data
