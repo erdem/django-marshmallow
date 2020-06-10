@@ -146,8 +146,7 @@ class InferredField(DJMFieldMixin, ma.fields.Inferred):
 
 class FileField(DJMFieldMixin, ma.fields.Field):
 
-    def __init__(self, upload_to='', storage=None, **kwargs):
-        self.storage = storage or default_storage
+    def __init__(self, upload_to='', **kwargs):
         self.upload_to = upload_to
 
         self.filename_format=kwargs.get('filename_format')
