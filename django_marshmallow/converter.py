@@ -188,6 +188,7 @@ class ModelFieldConverter:
     def build_related_field(self, field_name, model_field_info):
         relation_info = model_field_info.relations.get(field_name)
         field_kwargs = self.get_related_field_kwargs(relation_info)
+
         if not self.opts.expand_related_pk_fields:
             field_class = self.related_pk_field_class(**field_kwargs)
         else:
@@ -267,5 +268,6 @@ class ModelFieldConverter:
             kwargs['choices'] = model_field.choices
 
         kwargs['validate'] = field_validators
+        metadata['field_kwargs'] = kwargs
         kwargs['metadata'] = metadata
         return kwargs

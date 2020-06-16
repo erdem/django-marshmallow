@@ -29,11 +29,13 @@ class FileField(DJMFieldMixin, ma.fields.Field):
         'max_length': 'Ensure this filename has at most {max_length} characters (it has {length}).',
     }
 
-    def __init__(self, **kwargs):
-        self.allow_empty_file = kwargs.pop('allow_empty_file', False)
-        self.max_length = kwargs.pop('max_length', None)
-        self.use_url = kwargs.pop('use_url',  None)
-        self.base_url = kwargs.pop('base_url',  None)
+    def __init__(self, allow_empty_file=False, max_length=None, **kwargs):
+        self.allow_empty_file =allow_empty_file
+        self.max_length = max_length
+        if 'use_url' in kwargs:
+            self.use_url = kwargs.pop('use_url')
+        if 'custom_domain' in kwargs:
+            self.custom_domain = kwargs.pop('custom_domain')
         super().__init__(**kwargs)
 
     def _deserialize(self, value, attr, data, **kwargs):
@@ -50,21 +52,21 @@ class FileField(DJMFieldMixin, ma.fields.Field):
         if self.max_length and len(file_name) > self.max_length:
             self.fail('max_length', max_length=self.max_length, length=len(file_name))
 
-        return data
+        return value
 
     def _serialize(self, value, attr, obj, **kwargs):
         if not value:
             return None
 
         use_url = getattr(self, 'use_url', self.root.opts.use_file_url)
-        base_url = getattr(self, 'base_url', self.root.opts.base_files_url)
+        custom_domain = getattr(self, 'custom_domain', self.root.opts.domain_for_files_url)
         if use_url:
             try:
                 url = value.url
             except AttributeError:
                 return None
-            if base_url:
-                return urljoin(base_url, url)
+            if custom_domain:
+                return urljoin(custom_domain, url)
 
             request = self.metadata.get('request')
             if request:
@@ -78,7 +80,8 @@ class ImageField(FileField):
 
     def _deserialize(self, value, attr, data, **kwargs):
         image_file = super()._deserialize(value, attr, data, **kwargs)
-        django_form_field = self.model_field.formfield
+        field_kwargs = self.metadata.get('field_kwargs', {})
+        django_form_field = self.model_field.formfield(**field_kwargs)
         django_form_field.error_messages = self.error_messages
         return django_form_field.clean(image_file)
 

@@ -44,6 +44,8 @@ class ModelSchemaOpts(SchemaOpts):
         self.include_pk = getattr(meta, 'include_pk', True)
         self.expand_related_pk_fields = getattr(meta, 'expand_related_pk_fields', True)
         self.show_select_options = getattr(meta, 'show_select_options', False)
+        self.use_file_url = getattr(meta, 'use_file_url', True)
+        self.domain_for_files_url = getattr(meta, 'domain_for_files_url', None)
 
 
 class ModelSchemaMetaclass(SchemaMeta):
