@@ -1,5 +1,6 @@
 import typing
 from collections import OrderedDict
+from urllib.parse import urljoin
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
@@ -9,7 +10,7 @@ from marshmallow import ValidationError, validate
 
 
 class DJMFieldMixin:
-    DJANGO_VALIDATORS = {
+    GENERIC_VALIDATORS = {
         'allow_blank': validate.Length(min=1, error='Field cannot be blank')
     }
 
@@ -18,20 +19,68 @@ class DJMFieldMixin:
         super().__init__(**kwargs)
 
 
-class Mapping(DJMFieldMixin, ma.fields.Mapping):
-    pass
+class FileField(DJMFieldMixin, ma.fields.Field):
+
+    default_error_messages = {
+        'required': 'No file was submitted.',
+        'invalid': 'The submitted data was not a file. Check the encoding type on the form.',
+        'no_name': 'No filename could be determined.',
+        'empty': 'The submitted file is empty.',
+        'max_length': 'Ensure this filename has at most {max_length} characters (it has {length}).',
+    }
+
+    def __init__(self, **kwargs):
+        self.allow_empty_file = kwargs.pop('allow_empty_file', False)
+        self.max_length = kwargs.pop('max_length', None)
+        self.use_url = kwargs.pop('use_url',  None)
+        self.base_url = kwargs.pop('base_url',  None)
+        super().__init__(**kwargs)
+
+    def _deserialize(self, value, attr, data, **kwargs):
+        try:
+            file_name = value.name
+            file_size = value.size
+        except AttributeError:
+            self.make_error('invalid')
+
+        if not file_name:
+            self.make_error('no_name')
+        if not self.allow_empty_file and not file_size:
+            self.fail('empty')
+        if self.max_length and len(file_name) > self.max_length:
+            self.fail('max_length', max_length=self.max_length, length=len(file_name))
+
+        return data
+
+    def _serialize(self, value, attr, obj, **kwargs):
+        if not value:
+            return None
+
+        use_url = getattr(self, 'use_url', self.root.opts.use_file_url)
+        base_url = getattr(self, 'base_url', self.root.opts.base_files_url)
+        if use_url:
+            try:
+                url = value.url
+            except AttributeError:
+                return None
+            if base_url:
+                return urljoin(base_url, url)
+
+            request = self.metadata.get('request')
+            if request:
+                return request.build_absolute_uri(url)
+
+            return url
+        return value.name
 
 
-class Dict(DJMFieldMixin, ma.fields.Dict):
-    pass
+class ImageField(FileField):
 
-
-class List(DJMFieldMixin, ma.fields.List):
-    pass
-
-
-class Tuple(DJMFieldMixin, ma.fields.Tuple):
-    pass
+    def _deserialize(self, value, attr, data, **kwargs):
+        image_file = super()._deserialize(value, attr, data, **kwargs)
+        django_form_field = self.model_field.formfield
+        django_form_field.error_messages = self.error_messages
+        return django_form_field.clean(image_file)
 
 
 class String(DJMFieldMixin, ma.fields.String):
@@ -39,7 +88,7 @@ class String(DJMFieldMixin, ma.fields.String):
         self.allow_blank = kwargs.pop('allow_blank', False)
         super().__init__(**kwargs)
         if not self.allow_blank:
-            self.validators.append(self.DJANGO_VALIDATORS.get('allow_blank'))
+            self.validators.append(self.GENERIC_VALIDATORS.get('allow_blank'))
 
 
 class ChoiceField(String):
@@ -66,131 +115,7 @@ class ChoiceField(String):
         return serialized_data
 
 
-class UUID(DJMFieldMixin, ma.fields.UUID):
-    pass
-
-
-class Number(DJMFieldMixin, ma.fields.Number):
-    pass
-
-
-class Integer(DJMFieldMixin, ma.fields.Integer):
-    pass
-
-
-class Decimal(DJMFieldMixin, ma.fields.Decimal):
-    pass
-
-
-class Boolean(DJMFieldMixin, ma.fields.Boolean):
-    pass
-
-
-class Float(DJMFieldMixin, ma.fields.Float):
-    pass
-
-
-class DateTime(DJMFieldMixin, ma.fields.DateTime):
-    pass
-
-
-class NaiveDateTime(DJMFieldMixin, ma.fields.NaiveDateTime):
-    pass
-
-
-class AwareDateTime(DJMFieldMixin, ma.fields.AwareDateTime):
-    pass
-
-
-class Time(DJMFieldMixin, ma.fields.Time):
-    pass
-
-
-class Date(DJMFieldMixin, ma.fields.Date):
-    pass
-
-
-class TimeDelta(DJMFieldMixin, ma.fields.TimeDelta):
-    pass
-
-
-class Url(DJMFieldMixin, ma.fields.Url):
-    pass
-
-
-class Email(DJMFieldMixin, ma.fields.Email):
-    pass
-
-
-class Method(DJMFieldMixin, ma.fields.Method):
-    pass
-
-
-class Function(DJMFieldMixin, ma.fields.Function):
-    pass
-
-
-class Constant(DJMFieldMixin, ma.fields.Constant):
-    pass
-
-
-class Pluck(DJMFieldMixin, ma.fields.Pluck):
-    pass
-
-
-class InferredField(DJMFieldMixin, ma.fields.Inferred):
-
-    def __init__(self, **kwargs):
-        super().__init__()
-
-
-class FileField(DJMFieldMixin, ma.fields.Field):
-
-    def __init__(self, upload_to='', **kwargs):
-        self.upload_to = upload_to
-
-        self.filename_format=kwargs.get('filename_format')
-        self.filename_callback=kwargs.get('filename_callback')
-        super().__init__()
-
-
-class ImageField(InferredField):
-    pass
-
-
-class BinaryField(InferredField):
-    pass
-
-
-class CommaSeparatedIntegerField(InferredField):
-    pass
-
-
-class FilePathField(InferredField):
-    pass
-
-
-class GenericIPAddressField(InferredField):
-    pass
-
-
-class IPAddressField(InferredField):
-    pass
-
-
-class SlugField(InferredField):
-    pass
-
-
-# Aliases
-URL = Url
-Str = String
-Bool = Boolean
-Int = Integer
-
 ### Related fields
-
-
 class RelatedPKField(ma.fields.Field):
 
     default_error_messages = {
@@ -381,3 +306,128 @@ class RelatedNested(ma.fields.Nested):
                 instance = self.related_model(**data)
             return instance
         return data
+
+
+class Mapping(DJMFieldMixin, ma.fields.Mapping):
+    pass
+
+
+class Dict(DJMFieldMixin, ma.fields.Dict):
+    pass
+
+
+class List(DJMFieldMixin, ma.fields.List):
+    pass
+
+
+class Tuple(DJMFieldMixin, ma.fields.Tuple):
+    pass
+
+
+class UUID(DJMFieldMixin, ma.fields.UUID):
+    pass
+
+
+class Number(DJMFieldMixin, ma.fields.Number):
+    pass
+
+
+class Integer(DJMFieldMixin, ma.fields.Integer):
+    pass
+
+
+class Decimal(DJMFieldMixin, ma.fields.Decimal):
+    pass
+
+
+class Boolean(DJMFieldMixin, ma.fields.Boolean):
+    pass
+
+
+class Float(DJMFieldMixin, ma.fields.Float):
+    pass
+
+
+class DateTime(DJMFieldMixin, ma.fields.DateTime):
+    pass
+
+
+class NaiveDateTime(DJMFieldMixin, ma.fields.NaiveDateTime):
+    pass
+
+
+class AwareDateTime(DJMFieldMixin, ma.fields.AwareDateTime):
+    pass
+
+
+class Time(DJMFieldMixin, ma.fields.Time):
+    pass
+
+
+class Date(DJMFieldMixin, ma.fields.Date):
+    pass
+
+
+class TimeDelta(DJMFieldMixin, ma.fields.TimeDelta):
+    pass
+
+
+class Url(DJMFieldMixin, ma.fields.Url):
+    pass
+
+
+class Email(DJMFieldMixin, ma.fields.Email):
+    pass
+
+
+class Method(DJMFieldMixin, ma.fields.Method):
+    pass
+
+
+class Function(DJMFieldMixin, ma.fields.Function):
+    pass
+
+
+class Constant(DJMFieldMixin, ma.fields.Constant):
+    pass
+
+
+class Pluck(DJMFieldMixin, ma.fields.Pluck):
+    pass
+
+
+class InferredField(DJMFieldMixin, ma.fields.Inferred):
+
+    def __init__(self, **kwargs):
+        super().__init__()
+
+
+class BinaryField(DJMFieldMixin, ma.fields.Field):
+    pass
+
+
+class CommaSeparatedIntegerField(InferredField):
+    pass
+
+
+class FilePathField(InferredField):
+    pass
+
+
+class GenericIPAddressField(InferredField):
+    pass
+
+
+class IPAddressField(InferredField):
+    pass
+
+
+class SlugField(InferredField):
+    pass
+
+
+# Aliases
+URL = Url
+Str = String
+Bool = Boolean
+Int = Integer
