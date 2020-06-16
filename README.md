@@ -81,3 +81,38 @@ Examples:
 ```
 
 
+```python
+    from django_marshmallow import schemas, fields
+
+    class CitySchema(schemas.ModelSchema):
+        created_at = fields.Date()
+
+        class Meta:
+            fields = ('id', 'country', 'name', 'created_at')
+            nested_fields = {
+                'country': {
+                    'fields': ('id', 'name')    
+                }
+            }
+            model = City
+
+    country = Country(name='United Kingdom')
+    city = City(country=country, name='London')
+    city.save()
+
+    city_schema = CitySchema()
+    city_schema.dump(city)
+    # {
+    #     'id': 1
+    #     'country': {
+    #         'id': 1
+    #         'name': 'United Kingdom'
+    #     },
+    #     'name': 'London',
+    #     'created_at': 2018-09-09:17:23
+    # }
+```
+
+
+
+
