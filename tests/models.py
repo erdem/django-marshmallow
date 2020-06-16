@@ -46,7 +46,7 @@ class DataFieldsModel(TestAbstractModel):
     small_integer_field = models.SmallIntegerField()
     text_field = models.TextField()
     text_field_blank_true = models.TextField(blank=True)
-    file_field = models.FileField()
+    file_field = models.FileField(upload_to='tests/media/')
     time_field = models.TimeField()
     url_field = models.URLField(max_length=255)
     custom_field = CustomField(max_length=255)
@@ -126,6 +126,13 @@ COLOR_CHOICES = (
     ('blue', 'Blue'),
     ('green', 'Green')
 )
+
+
+class FileFieldModel(TestAbstractModel):
+    name = models.CharField(max_length=255)
+    file_field = models.FileField(upload_to='file_field/%Y/%m/%d/')
+    image_field = models.ImageField(upload_to='image_field/')
+    file_path_field = models.FilePathField(path=tempfile.gettempdir(), null=True)
 
 
 class FieldOptionsModel(TestAbstractModel):

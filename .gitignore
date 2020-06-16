@@ -104,4 +104,4 @@ ENV/
 
 db.sqlite3
 notes.md
-/tests/tests/media/
+/tests/media/

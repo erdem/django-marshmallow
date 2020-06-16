@@ -1,7 +1,10 @@
+import mimetypes
+from PIL import Image
+from io import BytesIO
 from types import SimpleNamespace
 
 import django
-from _pytest.outcomes import Failed
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.conf import settings
 
 import pytest
@@ -46,3 +49,54 @@ def db_models():
         [(model_class.__name__, model_class) for model_class in model_classes]
     ))
 
+
+@pytest.fixture
+def uploaded_file_obj():
+    fi = BytesIO(b'This is a test file.')
+
+    def getsize(f):
+        f.seek(0)
+        f.read()
+        s = f.tell()
+        f.seek(0)
+        return s
+
+    name = 'test_file.txt'
+    content_type, charset = mimetypes.guess_type(name)
+    size = getsize(fi)
+    return InMemoryUploadedFile(
+        file=fi,
+        field_name=None,
+        name=name,
+        content_type=content_type,
+        charset=charset,
+        size=size
+    )
+
+
+@pytest.fixture
+def uploaded_image_file_obj():
+    im = Image.new(mode='RGB', size=(400, 400))
+    im_io = BytesIO()
+    im.save(im_io, 'jpeg')
+    im_io.seek(0)
+
+    return InMemoryUploadedFile(
+        file=im_io,
+        field_name=None,
+        name='test_image.jpg',
+        content_type='image/jpeg',
+        size=len(im_io.getvalue()),
+        charset=None
+    )
+
+
+@pytest.fixture
+def file_field_obj(db_models, uploaded_file_obj, uploaded_image_file_obj):
+    obj = db_models.FileFieldModel(
+        name='File field instance',
+        file_field=uploaded_file_obj,
+        image_field=uploaded_image_file_obj
+    )
+    obj.save()
+    return obj

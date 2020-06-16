@@ -197,7 +197,6 @@ def test_implicit_related_nested_fields_deserialization(db, db_models):
     db_models.AllRelatedFieldsModel.objects.all().delete()
 
     class TestSchema(ModelSchema):
-
         class Meta:
             model = db_models.AllRelatedFieldsModel
             fields = ('name', 'foreign_key_field', 'many_to_many_field', 'one_to_one_field')
@@ -261,12 +260,10 @@ def test_implicit_related_nested_fields_deserialization(db, db_models):
 
 
 def test_choices_field_deserialization(db, db_models):
-
     class TestSchema(ModelSchema):
-
         class Meta:
             model = db_models.BasicChoiceFieldModel
-            fields = ('color', )
+            fields = ('color',)
 
     load_data = {
         'color': 'red'
@@ -280,10 +277,9 @@ def test_choices_field_deserialization(db, db_models):
     # test same schema with `show_select_options`
 
     class TestSchema(ModelSchema):
-
         class Meta:
             model = db_models.BasicChoiceFieldModel
-            fields = ('color', )
+            fields = ('color',)
             show_select_options = True
 
     load_data = {
@@ -294,3 +290,25 @@ def test_choices_field_deserialization(db, db_models):
     data = schema.load(load_data)
     assert len(data) == 1
     assert data['color'] == 'red'
+
+
+def test_file_field_deserialization(db_models, uploaded_file_obj, uploaded_image_file_obj):
+
+    class TestSchema(ModelSchema):
+
+        class Meta:
+            model = db_models.FileFieldModel
+            fields = ('name', 'file_field', 'image_field')
+
+    name = 'test file and image fields'
+    load_data = {
+        'name': name,
+        'file_field': uploaded_file_obj,
+        'image_field': uploaded_image_file_obj
+    }
+    schema = TestSchema()
+    data = schema.load(load_data)
+    assert len(data) == 3
+    assert data['name'] == name
+    assert data['file_field'].name == uploaded_file_obj.name
+    assert data['image_field'].name == uploaded_image_file_obj.name

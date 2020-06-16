@@ -2,7 +2,7 @@ import os
 import tempfile
 from datetime import datetime
 from decimal import Decimal
-from collections import OrderedDict
+from urllib.parse import urljoin
 
 import pytest
 from django.core.files import File
@@ -40,7 +40,7 @@ def data_model_obj(db, db_models):
     file_temp = NamedTemporaryFile(delete=True)
     file_temp.write(file_temp.read(1))
     file_temp.flush()
-    instance.file_field.save(os.path.join('tests/media/test_tmp_file'), File(file_temp))
+    instance.file_field.save('test_file', File(file_temp))
     file_temp.close()
     instance.save()
     return instance
@@ -109,7 +109,6 @@ def test_choices_field_serialization(db_models):
     assert data['color'] == 'red'
 
     # test same schema with `show_select_options`
-
     class TestSchema(ModelSchema):
 
         class Meta:
@@ -122,6 +121,60 @@ def test_choices_field_serialization(db_models):
     assert len(data) == 1
     assert data['color']['value'] == 'red'
     assert data['color']['options'] == list(db_models.BasicChoiceFieldModel.COLOR_CHOICES)
+
+
+def test_file_field_serialization(db_models, file_field_obj):
+    class TestSchema(ModelSchema):
+
+        class Meta:
+            model = db_models.FileFieldModel
+            fields = ('name', 'file_field', 'image_field')
+
+    schema = TestSchema()
+    data = schema.dump(file_field_obj)
+    assert len(data) == 3
+    assert data['name'] == file_field_obj.name
+    assert data['file_field'] == file_field_obj.file_field.url
+    assert data['image_field'] == file_field_obj.image_field.url
+
+    class TestSchema(ModelSchema):
+
+        class Meta:
+            model = db_models.FileFieldModel
+            fields = ('name', 'file_field', 'image_field')
+            use_file_url = False
+
+    schema = TestSchema()
+    data = schema.dump(file_field_obj)
+    assert len(data) == 3
+    assert data['name'] == file_field_obj.name
+
+    # file fields serialize file names instead of file URLs
+    assert data['file_field'] == file_field_obj.file_field.name
+    assert data['image_field'] == file_field_obj.image_field.name
+
+    custom_files_domain = 'http://test-server'
+    class TestSchema(ModelSchema):
+
+        class Meta:
+            model = db_models.FileFieldModel
+            fields = ('name', 'file_field', 'image_field')
+            domain_for_files_url = custom_files_domain
+            use_file_url = True
+
+    schema = TestSchema()
+    data = schema.dump(file_field_obj)
+    assert len(data) == 3
+    assert data['name'] == file_field_obj.name
+
+    assert data['file_field'] == urljoin(
+        custom_files_domain,
+        file_field_obj.file_field.url
+    )
+    assert data['image_field'] == urljoin(
+        custom_files_domain,
+        file_field_obj.image_field.url
+    )
 
 
 @pytest.fixture(scope='function', autouse=True)
