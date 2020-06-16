@@ -47,7 +47,7 @@ class PostModelSchema(ModelSchema):
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    list_display = ('title', 'load_model_schema', 'model_schema_response')
+    list_display = ('title', )
     list_filter = ('category', 'tags')
 
     def rest_serializer_response(self, post):
@@ -92,6 +92,8 @@ class PostAdmin(admin.ModelAdmin):
         data = schema.dump(Post.objects.filter(title='first schema post').first())
         return mark_safe(f'<pre>{json.dumps(data, indent=4)}</pre>')
 
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        return super().change_view(request, object_id, form_url, extra_context)
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):

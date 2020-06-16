@@ -36,7 +36,8 @@ class Post(models.Model):
         on_delete=models.CASCADE
     )
     tags = models.ManyToManyField(Tag)
-
+    image = models.ImageField(null=True, upload_to='uploads/')
+    file = models.FileField(null=True, upload_to='uploads2/')
     title = models.CharField(max_length=255)
     post = models.TextField(blank=True, null=True)
     is_published = models.BooleanField()

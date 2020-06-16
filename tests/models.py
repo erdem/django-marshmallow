@@ -130,8 +130,8 @@ COLOR_CHOICES = (
 
 class FileFieldModel(TestAbstractModel):
     name = models.CharField(max_length=255)
-    file_field = models.FileField(upload_to='file_field/%Y/%m/%d/')
-    image_field = models.ImageField(upload_to='image_field/')
+    file_field = models.FileField(upload_to='tests/media/file_field/%Y/%m/%d/')
+    image_field = models.ImageField(upload_to='tests/media/image_field/')
     file_path_field = models.FilePathField(path=tempfile.gettempdir(), null=True)
 
 
