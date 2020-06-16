@@ -1,49 +1,11 @@
-import os
-import tempfile
-from datetime import datetime
-from decimal import Decimal
 from urllib.parse import urljoin
 
 import pytest
-from django.core.files import File
-from django.core.files.temp import NamedTemporaryFile
 from django.db import transaction
 from django.forms import model_to_dict
 
 from django_marshmallow import fields
 from django_marshmallow.schemas import ModelSchema
-
-
-@pytest.fixture
-def data_model_obj(db, db_models):
-    instance = db_models.DataFieldsModel(
-        big_integer_field=10000000,
-        boolean_field=False,
-        char_field='This a char field',
-        date_field=datetime.today(),
-        datetime_field=datetime.now(),
-        decimal_field=Decimal('3.56'),
-        email_field='test@test.com',
-        float_field=1.45,
-        integer_field=10,
-        null_boolean_field=None,
-        positive_integer_field=200000,
-        positive_small_integer_field=10,
-        small_integer_field=20,
-        text_field="The text field value",
-        time_field=datetime.now().time(),
-        url_field="http://www.test.com",
-        custom_field="custom field text",
-        file_path_field=os.listdir(tempfile.gettempdir())[0]
-    )
-
-    file_temp = NamedTemporaryFile(delete=True)
-    file_temp.write(file_temp.read(1))
-    file_temp.flush()
-    instance.file_field.save('test_file', File(file_temp))
-    file_temp.close()
-    instance.save()
-    return instance
 
 
 def test_schema_serialization_with_all_fields_option(db_models, data_model_obj):
@@ -91,7 +53,7 @@ def test_schema_serialization_with_declared_fields(db_models, data_model_obj):
     assert data['test_field'] == 123
 
 
-def test_choices_field_serialization(db_models):
+def test_choices_field_serialization(db, db_models):
     basic_choice_obj = db_models.BasicChoiceFieldModel(
         color='red'
     )
@@ -175,49 +137,6 @@ def test_file_field_serialization(db_models, file_field_obj):
         custom_files_domain,
         file_field_obj.image_field.url
     )
-
-
-@pytest.fixture(scope='function', autouse=True)
-def all_related_obj(db, db_models):
-    one_to_one_instance = db_models.OneToOneTarget(
-        name='One to One'
-    )
-    one_to_one_instance.save()
-    foreign_key_instnace = db_models.ForeignKeyTarget(
-        name='Foreign Key'
-    )
-    foreign_key_instnace.save()
-    many_to_many_instance_1 = db_models.ManyToManyTarget(
-        name='Many to Many 1'
-    )
-    many_to_many_instance_1.save()
-
-    m2m_foreign_key_instnace = db_models.ForeignKeyTarget(
-        name='Second level relation'
-    )
-    m2m_foreign_key_instnace.save()
-    many_to_many_instance_2 = db_models.ManyToManyTarget(
-        name='Many to Many 2',
-    )
-    many_to_many_instance_2.second_depth_relation_field = m2m_foreign_key_instnace
-    many_to_many_instance_2.save()
-
-    many_to_many_instances = [
-        many_to_many_instance_1,
-        many_to_many_instance_2
-    ]
-    all_related_obj = db_models.AllRelatedFieldsModel(
-        name='All related model',
-        one_to_one_field=one_to_one_instance,
-        foreign_key_field = foreign_key_instnace
-    )
-
-    with transaction.atomic():
-        all_related_obj.save()
-        all_related_obj.many_to_many_field.set(many_to_many_instances)
-
-    all_related_obj = db_models.AllRelatedFieldsModel.objects.get(pk=all_related_obj.pk)
-    return all_related_obj
 
 
 def test_schema_serialization_with_related_fields(db_models, all_related_obj):

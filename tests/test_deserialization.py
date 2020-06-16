@@ -1,34 +1,5 @@
-import pytest
-
 from django_marshmallow import fields
 from django_marshmallow.schemas import ModelSchema
-
-
-@pytest.fixture
-def fk_related_instance(db_models):
-    foreign_key_instnace = db_models.ForeignKeyTarget(
-        name='Foreign Key'
-    )
-    foreign_key_instnace.save()
-    return foreign_key_instnace
-
-
-@pytest.fixture
-def m2m_related_instance(db_models):
-    many_to_many_instance = db_models.ManyToManyTarget(
-        name='Many to Many'
-    )
-    many_to_many_instance.save()
-    return many_to_many_instance
-
-
-@pytest.fixture
-def o2o_related_instance(db_models):
-    one_to_one_instance = db_models.OneToOneTarget(
-        name='One to One'
-    )
-    one_to_one_instance.save()
-    return one_to_one_instance
 
 
 def test_related_fields_deserialization(

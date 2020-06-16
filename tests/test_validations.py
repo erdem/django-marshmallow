@@ -1,45 +1,7 @@
 import uuid
 
-import pytest
-
 from django_marshmallow import fields
 from django_marshmallow.schemas import ModelSchema
-
-
-@pytest.fixture
-def fk_related_instance(db_models):
-    foreign_key_instnace = db_models.ForeignKeyTarget(
-        name='Foreign Key'
-    )
-    foreign_key_instnace.save()
-    return foreign_key_instnace
-
-
-@pytest.fixture
-def m2m_related_instances(db_models):
-    many_to_many_instance_1 = db_models.ManyToManyTarget(
-        name='Many to Many 1'
-    )
-    many_to_many_instance_1.save()
-
-    many_to_many_instance_2 = db_models.ManyToManyTarget(
-        name='Many to Many 2'
-    )
-    many_to_many_instance_2.save()
-    m2m_instances = [
-        many_to_many_instance_1,
-        many_to_many_instance_2
-    ]
-    return m2m_instances
-
-
-@pytest.fixture
-def o2o_related_instance(db_models):
-    one_to_one_instance = db_models.OneToOneTarget(
-        name='One to One'
-    )
-    one_to_one_instance.save()
-    return one_to_one_instance
 
 
 def test_invalid_primary_key_validation_for_foreign_key_fields(db, db_models, fk_related_instance):
