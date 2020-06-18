@@ -91,18 +91,6 @@ class TestModelSchemaOptions:
         assert exc_info.type == AssertionError
         assert error_msg == '`depth` cannot be greater than 10. ModelSchemaMetaclass schema class schema class needs updating.'
 
-    def test_schema_include_pk_option_validation(self, db_models):
-        with pytest.raises(Exception) as exc_info:
-            class TestModelSchema(ModelSchema):
-                class Meta:
-                    model = db_models.SimpleTestModel
-                    fields = ('name', )
-                    include_pk = None
-
-        error_msg = exc_info.value.args[0]
-        assert exc_info.type == ValueError
-        assert error_msg == '`include_pk` option must be a boolean.'
-
     def test_schema_ordered_option_functionality(self, db_models):
         expected_fields = ('id', 'name', 'text', 'published_date', 'created_at')
 

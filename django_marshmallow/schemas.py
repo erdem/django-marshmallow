@@ -42,7 +42,6 @@ class ModelSchemaOpts(SchemaOpts):
         self.model_converter = getattr(meta, 'model_converter', ModelFieldConverter)
         self.depth = getattr(meta, 'depth', None)
         self.ordered = getattr(meta, 'ordered', True)
-        self.include_pk = getattr(meta, 'include_pk', True)
         self.expand_related_pk_fields = getattr(meta, 'expand_related_pk_fields', True)
         self.show_select_options = getattr(meta, 'show_select_options', False)
         self.use_file_url = getattr(meta, 'use_file_url', True)
@@ -66,7 +65,6 @@ class ModelSchemaMetaclass(SchemaMeta):
         fields = opts.fields
         exclude = opts.exclude
         model = opts.model
-        include_pk = opts.include_pk
 
         if not model:
             raise ImproperlyConfigured(
@@ -84,11 +82,6 @@ class ModelSchemaMetaclass(SchemaMeta):
                 'Creating a ModelSchema without either `Meta.fields` attribute '
                 'or `Meta.exclude` attribute is prohibited; %s '
                 'schema class needs updating.' % klass.__name__
-            )
-
-        if not isinstance(include_pk, bool):
-            raise ValueError(
-                '`include_pk` option must be a boolean.'
             )
 
         if fields and exclude:
@@ -144,8 +137,7 @@ class BaseModelSchema(Schema, metaclass=ModelSchemaMetaclass):
 
     @cached_property
     def pk_field(self):
-        if self.opts.include_pk:
-            return self._pk_field
+        return self._pk_field
 
     def get_fields(self):
         return copy.deepcopy(self._declared_fields)

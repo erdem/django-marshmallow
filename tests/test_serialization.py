@@ -13,7 +13,6 @@ def test_schema_serialization_with_all_fields_option(db_models, data_model_obj):
         class Meta:
             model = db_models.DataFieldsModel
             fields = '__all__'
-            include_pk = True
 
     schema = TestSchema()
     data = schema.dump(data_model_obj)

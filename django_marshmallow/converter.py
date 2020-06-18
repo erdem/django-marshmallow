@@ -66,7 +66,6 @@ class ModelFieldConverter:
         schema_fields = self.opts.fields
         schema_nested_fields = self.opts.nested_fields
         exclude = self.opts.exclude
-        include_pk = self.opts.include_pk
         nested_depth = self.opts.depth
 
         if not declared_fields:
@@ -74,13 +73,6 @@ class ModelFieldConverter:
 
         model_field_info = get_field_info(model)
         field_list = []
-
-        if include_pk:
-            pk_field = self.build_primary_key_field(
-                field_name=self.schema_cls.model_pk_field.name,
-                model_field=self.schema_cls.model_pk_field
-            )
-            field_list.append(pk_field)
 
         for field_name, model_field in model_field_info.all_fields.items():
 
@@ -91,9 +83,6 @@ class ModelFieldConverter:
                 continue
 
             if exclude and field_name in exclude:
-                continue
-
-            if field_name == self.schema_cls.model_pk_field.name:
                 continue
 
             relation_info = model_field_info.relations.get(field_name)
