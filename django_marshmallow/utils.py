@@ -1,5 +1,6 @@
 from collections import OrderedDict, namedtuple
 
+from django.db.models import FileField
 
 FieldInfo = namedtuple('FieldResult', [
     'pk',  # Model field instance
@@ -163,3 +164,28 @@ def is_abstract_model(model):
     Given a model class, returns a boolean True if it is abstract and False if it is not.
     """
     return hasattr(model, '_meta') and hasattr(model._meta, 'abstract') and model._meta.abstract
+
+
+def construct_instance(schema, validated_data):
+    """
+    Construct and return a model instance from the bound ``schema``'s
+    ``validated_data``, but do not save the returned instance to the database.
+    """
+
+    ModelClass = schema.opts.model
+    instance = ModelClass()
+    model_opts = instance._meta
+
+    file_field_list = []
+
+    for f in model_opts.fields:
+        if f.name in validated_data:
+            if isinstance(f, FileField):
+                file_field_list.append(f)
+            else:
+                f.save_form_data(instance, validated_data[f.name])
+
+    for file_field in file_field_list:
+        file_field.save_form_data(instance, validated_data[f.name])
+
+    return instance

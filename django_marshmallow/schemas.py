@@ -1,17 +1,18 @@
 import copy
+import typing
 from collections import OrderedDict
+from itertools import chain
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db import models
 from django.utils.functional import cached_property
 from marshmallow.schema import SchemaMeta, SchemaOpts
 
-from marshmallow import Schema
+from marshmallow import Schema, types
 
 from django_marshmallow.converter import ModelFieldConverter
 from django_marshmallow.fields import RelatedField, RelatedNested
-from django_marshmallow.utils import get_field_info
-
+from django_marshmallow.utils import get_field_info, construct_instance
 
 ALL_FIELDS = '__all__'
 
@@ -161,6 +162,14 @@ class BaseModelSchema(Schema, metaclass=ModelSchemaMetaclass):
                 related_fields.append((field_name, field))
         return OrderedDict(related_fields)
 
+    @cached_property
+    def related_nesteds(self):
+        related_fields = []
+        for field_name, field in self.fields.items():
+            if isinstance(field, RelatedNested):
+                related_fields.append((field_name, field))
+        return OrderedDict(related_fields)
+
     def _serialize(self, obj, many=False, *args, **kwargs):
         if many and isinstance(obj, models.Manager):
             obj = obj.get_queryset()
@@ -172,59 +181,59 @@ class BaseModelSchema(Schema, metaclass=ModelSchemaMetaclass):
     def validated_data(self):
         if not hasattr(self, '_validated_data'):
             raise AssertionError(
-                'You must call `.load()` or `.validate()` before accessing `.validated_data`.'
+                'You must call `.validate()` before accessing the schema `validated_data` attribute.'
             )
         return self._validated_data
+
+    @property
+    def load_data(self):
+        if not hasattr(self, '_load_data'):
+            raise AssertionError(
+                'You must call `.load()` before save or accessing the schema `load_data` attribute.'
+            )
+        return self._load_data
 
     def _do_load(self, data, **kwargs):
-        self._validated_data = super()._do_load(data, **kwargs)
-        return self._validated_data
+        self._load_data = super()._do_load(data, **kwargs)
+        self._validated_data = data
+        return self._load_data
 
-    def save(self, validated_data=None, commit=True):
-        data = validated_data or self.validated_data
-        ModelClass = self.opts.model
+    def _save_m2m(self, instance, load_data=None):
+        """
+            Save the many-to-many fields and generic relations.
+        """
 
-        # Remove many-to-many relationships from validated_data.
-        # They are not valid arguments to the default `.create()` method,
-        # as they require that the instance has already been saved.
-        info = get_field_info(ModelClass)
-        many_to_many = {}
-        for field_name, relation_info in info.relations.items():
-            if relation_info.to_many and (field_name in data):
-                many_to_many[field_name] = data.pop(field_name)
+        def _save_from_data(instance, load_data):
+            model_opts = instance._meta
+            for f in chain(model_opts.many_to_many, model_opts.private_fields):
+                if f.name in self.related_fields:
+                    rel = self.related_fields[f.name]
+                    if rel.many:
+                        m2m_items = load_data[f.name]
+                        f.save_form_data(instance, m2m_items)
 
-        try:
-            if self.many:
-                instance = []
-                for d in data:
-                    o = ModelClass(**d)
-                    o.save()
-                    instance.append(o)
-            else:
-                instance = ModelClass._default_manager.create(**data)
-        except TypeError:
-            msg = (
-                'Got a `TypeError` when calling `%s.%s.create()`. '
-                'This may be because you have a writable field on the '
-                'serializer class that is not a valid argument to '
-                '`%s.%s.create()`. You may need to make the field '
-                'read-only, or override the %s.create() method to handle '
-                'this correctly.\nOriginal exception' %
-                (
-                    ModelClass.__name__,
-                    ModelClass._default_manager.name,
-                    ModelClass.__name__,
-                    ModelClass._default_manager.name,
-                    self.__class__.__name__,
-                )
-            )
-            raise TypeError(msg)
+        if not self.many:
+            _save_from_data(instance, load_data)
+        else:
+            for data in load_data:
+                _save_from_data(instance, data)
 
-        # Save many-to-many relationships after the instance is created.
-        if many_to_many:
-            for field_name, value in many_to_many.items():
-                field = getattr(instance, field_name)
-                field.set(value)
+    def save(self, validated_data=None, many=None, **kwargs):
+        many = self.many if many is None else bool(many)
+        if not validated_data:
+            validated_data = self.validated_data
+        load_data = self.load(validated_data, many=many)
+
+        if not many:
+            for related_name, related_field in self.related_nesteds.items():
+                if related_name in load_data:
+                    load_data[related_name] = related_field.schema.save()
+            instance = construct_instance(self, load_data)
+            instance.save()
+            self._save_m2m(instance, load_data)
+        else:
+            kwargs['many'] = False
+            instance = [self.save(vd, **kwargs) for vd in validated_data]
 
         return instance
 
