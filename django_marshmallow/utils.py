@@ -186,6 +186,6 @@ def construct_instance(schema, validated_data):
                 f.save_form_data(instance, validated_data[f.name])
 
     for file_field in file_field_list:
-        file_field.save_form_data(instance, validated_data[f.name])
+        file_field.save_form_data(instance, validated_data[file_field.name])
 
     return instance

@@ -25,10 +25,7 @@ def test_file_field_model_save(db, db_models, uploaded_file_obj, uploaded_image_
     assert db_models.FileFieldModel.objects.first().image_field.url == instance.image_field.url
 
 
-def test_related_nested_fields_save(
-        db,
-        db_models
-):
+def test_related_nested_fields_save(db, db_models):
     """
         Load a schema has related nested fields. Do not call save method of the schema.
     """
@@ -60,7 +57,7 @@ def test_related_nested_fields_save(
 
     schema = TestSchema()
 
-    load_data = {
+    save_data = {
         'name': 'Related Nested Instance',
         'foreign_key_field': {
             'name': 'foreign instance name'
@@ -78,9 +75,61 @@ def test_related_nested_fields_save(
         ]
     }
 
-    deserialized_data = schema.load(load_data)
+    load_data = schema.load(save_data)
+    assert len(load_data) == len(save_data)
+
+    # no need to pass `validated_data` parameter to `save()` if load or validate method called.
     instance = schema.save()
     assert instance.pk is not None
-    assert instance.foreign_key_field.name == load_data['foreign_key_field']['name']
-    assert instance.one_to_one_field.name == load_data['one_to_one_field']['name']
+    assert instance.foreign_key_field.name == save_data['foreign_key_field']['name']
+    assert instance.one_to_one_field.name == save_data['one_to_one_field']['name']
     assert instance.many_to_many_field.all().count() == 2
+
+
+def test_schema_with_related_pk_fields(db, db_models, fk_related_instance, m2m_related_instances):
+    """
+        Load a schema has related nested fields. Do not call save method of the schema.
+    """
+    db_models.AllRelatedFieldsModel.objects.all().delete()
+
+    class O2ONestedSchema(ModelSchema):
+        class Meta:
+            model = db_models.OneToOneTarget
+            fields = ('uuid', 'name')
+
+    class TestSchema(ModelSchema):
+        one_to_one_field = fields.RelatedNested(O2ONestedSchema)
+
+        class Meta:
+            model = db_models.AllRelatedFieldsModel
+            fields = ('name', 'foreign_key_field', 'many_to_many_field', 'one_to_one_field')
+
+    schema = TestSchema()
+
+    save_data = {
+        'name': 'Related Nested Instance',
+        'foreign_key_field': {
+            'pk': fk_related_instance.pk
+        },
+        'one_to_one_field': {
+            'name': 'O2O instance name'
+        },
+        'many_to_many_field': [
+            {
+                'uuid': m2m_related_instances[0].pk
+            },
+            {
+                'uuid': m2m_related_instances[1].pk
+            }
+        ]
+    }
+
+    errors = schema.validate(save_data)
+    assert len(errors) == 0
+    instance = schema.save(save_data)
+    assert instance.pk is not None
+    assert instance.foreign_key_field.id == fk_related_instance.id
+    assert instance.one_to_one_field.name == save_data['one_to_one_field']['name']
+    m2m_pk_list = list(instance.many_to_many_field.all().values_list('uuid', flat=True))
+    assert m2m_related_instances[0].uuid in m2m_pk_list
+    assert m2m_related_instances[1].uuid in m2m_pk_list
