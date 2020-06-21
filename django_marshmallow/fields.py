@@ -7,6 +7,8 @@ from django.db import models
 
 import marshmallow as ma
 from marshmallow import ValidationError, validate
+from django.core.exceptions import ValidationError as DjangoValidationError
+from marshmallow.validate import Validator
 
 
 class DJMFieldMixin:
@@ -17,6 +19,26 @@ class DJMFieldMixin:
     def __init__(self, **kwargs):
         self.model_field = kwargs.pop('model_field', None)
         super().__init__(**kwargs)
+
+    def _validate(self, value):
+        """Perform validation on ``value``. Raise a :exc:`ValidationError` if validation
+        does not succeed.
+        """
+        errors = []
+        kwargs = {}
+        for validator in self.validators:
+            try:
+                r = validator(value)
+                if not isinstance(validator, Validator) and r is False:
+                    raise self.make_error("validator_failed")
+            except (ValidationError, DjangoValidationError) as err:
+                kwargs.update(getattr(err, 'kwargs', {}))
+                if isinstance(err.messages, dict):
+                    errors.append(err.messages)
+                else:
+                    errors.extend(err.messages)
+        if errors:
+            raise ValidationError(errors, **kwargs)
 
 
 class FileField(DJMFieldMixin, ma.fields.Field):
