@@ -166,26 +166,26 @@ def is_abstract_model(model):
     return hasattr(model, '_meta') and hasattr(model._meta, 'abstract') and model._meta.abstract
 
 
-def construct_instance(schema, validated_data):
+def construct_instance(schema, data, instance=None):
     """
     Construct and return a model instance from the bound ``schema``'s
-    ``validated_data``, but do not save the returned instance to the database.
+    ``load_data``, but do not save the returned instance to the database.
     """
 
     ModelClass = schema.opts.model
-    instance = ModelClass()
+    instance = ModelClass() if not instance else instance
     model_opts = instance._meta
 
     file_field_list = []
 
     for f in model_opts.fields:
-        if f.name in validated_data:
+        if f.name in data:
             if isinstance(f, FileField):
                 file_field_list.append(f)
             else:
-                f.save_form_data(instance, validated_data[f.name])
+                f.save_form_data(instance, data[f.name])
 
     for file_field in file_field_list:
-        file_field.save_form_data(instance, validated_data[file_field.name])
+        file_field.save_form_data(instance, data[file_field.name])
 
     return instance

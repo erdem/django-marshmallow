@@ -181,7 +181,7 @@ class BaseModelSchema(Schema, metaclass=ModelSchemaMetaclass):
     def load_data(self):
         if not hasattr(self, '_load_data'):
             raise AssertionError(
-                'You must call `.load()` before save or accessing the schema `load_data` attribute.'
+                'You must call `.load()` before accessing the schema `load_data` attribute.'
             )
         return self._load_data
 
@@ -189,6 +189,18 @@ class BaseModelSchema(Schema, metaclass=ModelSchemaMetaclass):
         self._load_data = super()._do_load(data, **kwargs)
         self._validated_data = data
         return self._load_data
+
+    def update(self, instance, validated_data=None, partial=True, **kwargs):
+        """Update model instance fields with a `validated_data`"""
+        if not isinstance(instance, self.model_class):
+            raise TypeError(f'`instance` parameter must be instance of `{self.model_class.__name__}` class.')
+
+        kwargs['partial'] = partial
+        return self.save(
+            validated_data=validated_data,
+            instance=instance,
+            **kwargs
+        )
 
     def _save_m2m(self, instance, load_data=None):
         """
@@ -210,22 +222,25 @@ class BaseModelSchema(Schema, metaclass=ModelSchemaMetaclass):
             for data in load_data:
                 _save_from_data(instance, data)
 
-    def save(self, validated_data=None, many=None, **kwargs):
+    def save(self, validated_data=None, many=None, instance=None, **kwargs):
         many = self.many if many is None else bool(many)
         if not validated_data:
             validated_data = self.validated_data
-        load_data = self.load(validated_data, many=many)
+        load_data = self.load(validated_data, many=many, **kwargs)
 
         if not many:
             for related_name, related_field in self.related_nesteds.items():
                 if related_name in load_data:
                     load_data[related_name] = related_field.schema.save()
-            instance = construct_instance(self, load_data)
+            instance = construct_instance(
+                schema=self,
+                data=load_data,
+                instance=instance
+            )
             instance.save()
             self._save_m2m(instance, load_data)
         else:
-            kwargs['many'] = False
-            instance = [self.save(vd, **kwargs) for vd in validated_data]
+            instance = [self.save(vd, many=False, **kwargs) for vd in validated_data]
 
         return instance
 
