@@ -1,6 +1,7 @@
 import decimal
 import tempfile
 import uuid as uuid
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MinLengthValidator, MaxValueValidator
 from django.db import models
 
@@ -25,6 +26,14 @@ class SimpleTestModel(TestAbstractModel):
     created_at = models.DateTimeField(auto_now_add=True)
 
 
+def validate_even(value):
+    if value % 2 != 0:
+        raise ValidationError(
+            '%(value)s is not an even number',
+            params={'value': value},
+        )
+
+
 class DataFieldsModel(TestAbstractModel):
     """
     A model class for testing data fields (non-related fields).
@@ -38,7 +47,7 @@ class DataFieldsModel(TestAbstractModel):
     decimal_field = models.DecimalField(max_digits=3, decimal_places=1)
     email_field = models.EmailField(max_length=255)
     float_field = models.FloatField()
-    integer_field = models.IntegerField()
+    integer_field = models.IntegerField(validators=[validate_even])
     null_boolean_field = models.NullBooleanField()
     positive_integer_field = models.PositiveIntegerField()
     positive_small_integer_field = models.PositiveSmallIntegerField()

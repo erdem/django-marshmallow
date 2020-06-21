@@ -482,3 +482,20 @@ def test_choices_field_validation(db_models):
     schema = TestSchema()
     errors = schema.validate(validate_data)
     assert len(errors) == 0
+
+
+def test_django_model_field_validators_validation(db_models):
+
+    class TestSchema(ModelSchema):
+
+        class Meta:
+            model = db_models.DataFieldsModel
+            fields = ('integer_field', )
+
+    validate_data = {
+        'integer_field': 11,
+    }
+    schema = TestSchema()
+    errors = schema.validate(validate_data)
+    assert len(errors) == 1
+    assert errors['integer_field'] == ['11 is not an even number']
