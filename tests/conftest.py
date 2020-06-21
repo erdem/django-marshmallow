@@ -157,7 +157,7 @@ def o2o_related_instance(db_models):
 @pytest.fixture
 def data_model_obj(db, db_models):
     instance = db_models.DataFieldsModel(
-        big_integer_field=10000000,
+        big_integer_field=1000,
         boolean_field=False,
         char_field='This a char field',
         date_field=datetime.today(),
