@@ -322,8 +322,8 @@ class RelatedNested(ma.fields.Nested):
                 ' `related_model` parameter.'
             )
 
-    def deserialize(self, value, attr=None, data=None, **kwargs):
-        data = super().deserialize(value, attr, data, **kwargs)
+    def _deserialize(self, value, attr=None, data=None, **kwargs):
+        data = super()._deserialize(value, attr, data, **kwargs)
         if data:
             if self.many:
                 instance = [self.related_model(**d) for d in data]
