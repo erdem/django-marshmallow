@@ -1,10 +1,6 @@
-from collections import OrderedDict
-
 from django.core.exceptions import ImproperlyConfigured
 from django.db import models
 from django.utils.text import capfirst
-
-from marshmallow import validate
 
 from django_marshmallow import fields, schemas
 from django_marshmallow.utils import get_field_info

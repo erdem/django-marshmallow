@@ -3,13 +3,8 @@ from collections import OrderedDict, namedtuple
 from django.db.models import FileField
 
 FieldInfo = namedtuple('FieldResult', [
-    'pk',  # Model field instance
-    'fields',  # Dict of field name -> model field instance
-    'forward_relations',  # Dict of field name -> RelationInfo
-    'reverse_relations',  # Dict of field name -> RelationInfo
-    'fields_and_pk',  # Shortcut for 'pk' + 'fields'
-    'relations',  # Shortcut for 'forward_relations' + 'reverse_relations'
-    'all_fields'  # Shortcut for 'pk' + 'fields' + 'forward_relations' + 'reverse_relations'
+    'relations',
+    'all_fields'
 ])
 
 RelationInfo = namedtuple('RelationInfo', [
@@ -34,12 +29,10 @@ def get_field_info(model):
     fields = _get_fields(opts)
     forward_relations = _get_forward_relationships(opts)
     reverse_relations = _get_reverse_relationships(opts)
-    fields_and_pk = _merge_fields_and_pk(pk, fields)
     relationships = _merge_relationships(forward_relations, reverse_relations)
     all_fields = _merge_all_fields(pk, fields, forward_relations, reverse_relations)
 
-    return FieldInfo(pk, fields, forward_relations, reverse_relations,
-                     fields_and_pk, relationships, all_fields)
+    return FieldInfo(relationships, all_fields)
 
 
 def _get_pk(opts):
@@ -142,14 +135,6 @@ def _merge_all_fields(pk, fields, forward_relations, reverse_relations):
     all_fields.update(forward_relations)
     all_fields.update(reverse_relations)
     return all_fields
-
-
-def _merge_fields_and_pk(pk, fields):
-    fields_and_pk = OrderedDict()
-    fields_and_pk['pk'] = pk
-    fields_and_pk[pk.name] = pk
-    fields_and_pk.update(fields)
-    return fields_and_pk
 
 
 def _merge_relationships(forward_relations, reverse_relations):
