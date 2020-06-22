@@ -499,3 +499,30 @@ def test_django_model_field_validators_validation(db_models):
     errors = schema.validate(validate_data)
     assert len(errors) == 1
     assert errors['integer_field'] == ['11 is not an even number']
+
+
+def test_override_error_messages_functionality(db_models):
+
+    StringField = fields.String
+
+    class TestSchema(ModelSchema):
+        class Meta:
+            model = db_models.DataFieldsModel
+            fields = ('char_field', 'date_field', 'email_field', 'text_field')
+            override_error_messages = {
+                StringField: 'All string fields will raise same error message.',
+                'date_field': 'THIS NOT A VALID DATE'
+            }
+    validate_data = {
+        'char_field': None,
+        'date_field': None,
+        'email_field': None,
+        'text_field': None
+    }
+    schema = TestSchema()
+    errors = schema.validate(validate_data)
+    assert len(errors) == 4
+    assert errors['char_field'] == 'All string fields will raise same error message.'
+    assert errors['text_field'] == 'All string fields will raise same error message.'
+    assert errors['date_field'] == 'THIS NOT A VALID DATE'
+    assert errors['email_field'] == ['Field may not be null.']

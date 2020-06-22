@@ -6,9 +6,10 @@ from itertools import chain
 from django.core.exceptions import ImproperlyConfigured
 from django.db import models
 from django.utils.functional import cached_property
+from marshmallow.fields import Field
 from marshmallow.schema import SchemaMeta, SchemaOpts
 
-from marshmallow import Schema, types
+from marshmallow import Schema, types, ValidationError
 
 from django_marshmallow.converter import ModelFieldConverter
 from django_marshmallow.fields import RelatedField, RelatedNested
@@ -38,6 +39,10 @@ class ModelSchemaOpts(SchemaOpts):
         self.order_by = getattr(meta, 'order_by', ())
         if not isinstance(self.order_by, (list, tuple)):
             raise ValueError("`order_by` schema option must be a list or tuple.")
+
+        self.override_error_messages = getattr(meta, 'override_error_messages', None)
+        if self.override_error_messages is not None and not isinstance(self.override_error_messages, dict):
+            raise ValueError('`override_error_messages` option must be a dict.')
 
         self.model_converter = getattr(meta, 'model_converter', ModelFieldConverter)
         self.depth = getattr(meta, 'depth', None)
@@ -243,6 +248,32 @@ class BaseModelSchema(Schema, metaclass=ModelSchemaMetaclass):
             instance = [self.save(vd, many=False, **kwargs) for vd in validated_data]
 
         return instance
+
+    def handle_error(self, error: ValidationError, data: typing.Any, *, many: bool, **kwargs):
+        override_error_messages = self.opts.override_error_messages or {}
+        handled_errors = {}
+        for key, override_message in override_error_messages.items():
+            if isinstance(key, str):
+                handled_errors[key] = override_message
+                continue
+
+            if issubclass(key, Field) and isinstance(error.messages, dict):
+                # override error message for same type of schema field
+                for field_name, message in error.messages.items():
+                    schema_field = self.fields.get(field_name)
+                    if type(schema_field) is key:
+                        handled_errors[field_name] = override_message
+
+        if handled_errors:
+            error_messages = error.messages
+            error_messages.update(handled_errors)
+            raise ValidationError(
+                error_messages,
+                error.field_name,
+                error.data,
+                error.valid_data,
+                **error.kwargs
+            )
 
 
 class ModelSchema(BaseModelSchema):
