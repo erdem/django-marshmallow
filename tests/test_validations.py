@@ -501,7 +501,7 @@ def test_django_model_field_validators_validation(db_models):
     assert errors['integer_field'] == ['11 is not an even number']
 
 
-def test_override_error_messages_functionality(db_models):
+def test_error_message_overrides_functionality(db_models):
 
     StringField = fields.String
 
@@ -509,7 +509,7 @@ def test_override_error_messages_functionality(db_models):
         class Meta:
             model = db_models.DataFieldsModel
             fields = ('char_field', 'date_field', 'email_field', 'text_field')
-            override_error_messages = {
+            error_message_overrides = {
                 StringField: 'All string fields will raise same error message.',
                 'date_field': 'THIS NOT A VALID DATE'
             }

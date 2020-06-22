@@ -97,11 +97,11 @@ class TestModelSchemaOptions:
                 class Meta:
                     model = db_models.SimpleTestModel
                     fields = ('id', 'name')
-                    override_error_messages = []
+                    error_message_overrides = []
 
         error_msg = exc_info.value.args[0]
         assert exc_info.type == ValueError
-        assert error_msg == '`override_error_messages` option must be a dict.'
+        assert error_msg == '`error_message_overrides` option must be a dict.'
 
     def test_schema_ordered_option_functionality(self, db_models):
         expected_fields = ('id', 'name', 'text', 'published_date', 'created_at')

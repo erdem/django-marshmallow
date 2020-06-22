@@ -40,9 +40,9 @@ class ModelSchemaOpts(SchemaOpts):
         if not isinstance(self.order_by, (list, tuple)):
             raise ValueError("`order_by` schema option must be a list or tuple.")
 
-        self.override_error_messages = getattr(meta, 'override_error_messages', None)
-        if self.override_error_messages is not None and not isinstance(self.override_error_messages, dict):
-            raise ValueError('`override_error_messages` option must be a dict.')
+        self.error_message_overrides = getattr(meta, 'error_message_overrides', None)
+        if self.error_message_overrides is not None and not isinstance(self.error_message_overrides, dict):
+            raise ValueError('`error_message_overrides` option must be a dict.')
 
         self.model_converter = getattr(meta, 'model_converter', ModelFieldConverter)
         self.depth = getattr(meta, 'depth', None)
@@ -250,9 +250,9 @@ class BaseModelSchema(Schema, metaclass=ModelSchemaMetaclass):
         return instance
 
     def handle_error(self, error: ValidationError, data: typing.Any, *, many: bool, **kwargs):
-        override_error_messages = self.opts.override_error_messages or {}
+        error_message_overrides = self.opts.error_message_overrides or {}
         handled_errors = {}
-        for key, override_message in override_error_messages.items():
+        for key, override_message in error_message_overrides.items():
             if isinstance(key, str):
                 handled_errors[key] = override_message
                 continue
