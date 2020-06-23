@@ -217,7 +217,6 @@ class ModelFieldConverter:
 
     def get_schema_field_kwargs(self, model_field):
         kwargs = {}
-        metadata = {}
         field_validators = list(model_field.validators)
         kwargs['model_field'] = model_field
 
@@ -244,15 +243,14 @@ class ModelFieldConverter:
             kwargs['allow_none'] = True
 
         if model_field.verbose_name:
-            metadata['label'] = capfirst(model_field.verbose_name)
+            kwargs['label'] = capfirst(model_field.verbose_name)
 
         if model_field.help_text:
-            metadata['help_text'] = model_field.help_text
+            kwargs['help_text'] = model_field.help_text
 
         if model_field.choices:
             kwargs['choices'] = model_field.choices
 
         kwargs['validate'] = field_validators
-        metadata['field_kwargs'] = kwargs
-        kwargs['metadata'] = metadata
+        kwargs['field_kwargs'] = kwargs
         return kwargs

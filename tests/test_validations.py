@@ -361,7 +361,6 @@ def test_implicit_nested_fields_schema_validations(db, db_models):
     assert errors['foreign_key_field']['name'] == ['Field may not be null.']
 
     # more complex usage
-
     class TestM2MSchema(ModelSchema):
         class Meta:
             model = db_models.AllRelatedFieldsModel
@@ -391,7 +390,6 @@ def test_implicit_nested_fields_schema_validations(db, db_models):
     assert errors['many_to_many_field'] == {0: {'name': ['Field may not be null.']}}
 
     # `nested_fields` option can generate multi level nested schema field
-
     class TestM2MSchema(ModelSchema):
         class Meta:
             model = db_models.AllRelatedFieldsModel
@@ -442,6 +440,39 @@ def test_string_allow_blank_validation(db_models):
 
     assert len(errors) == 2
     assert errors == {'char_field': ['Field cannot be blank'], 'text_field': ['Field cannot be blank']}
+
+
+def test_related_field_with_limited_choices_deserialization(db_models, limited_related_choices_obj):
+    class TestSchema(ModelSchema):
+
+        class Meta:
+            model = db_models.SimpleRelationsModel
+            fields = ('foreign_key_field', )
+
+    # `foreign_key_field` choices limited for only `active=True` items
+    choice = db_models.ForeignKeyTarget.objects.filter(active=False).first()
+    schema = TestSchema()
+    validate_data = {
+        'foreign_key_field': {
+            'pk': choice.id
+        }
+    }
+    errors = schema.validate(validate_data)
+    assert len(errors) == 1
+    assert errors['foreign_key_field'] == {
+        'pk': ['`foreign_key_field` related field entity does not exists for "3" on ForeignKeyTarget']
+    }
+
+    # `foreign_key_field` choices limited for only `active=True` items
+    choice = db_models.ForeignKeyTarget.objects.filter(active=True).first()
+    schema = TestSchema()
+    validate_data = {
+        'foreign_key_field': {
+            'id': choice.id
+        }
+    }
+    errors = schema.validate(validate_data)
+    assert len(errors) == 0
 
 
 def test_choices_field_validation(db_models):

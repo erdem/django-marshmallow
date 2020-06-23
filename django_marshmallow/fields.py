@@ -168,6 +168,7 @@ class RelatedPKField(ma.fields.Field):
         self.related_model = related_model
         self.to_field = to_field
         self.many = many
+        self.queryset = kwargs.get('queryset', related_model._default_manager)
 
     def _serialize(self, value: typing.Any, attr: str, obj: typing.Any, **kwargs):
         related_field_value = getattr(obj, attr, None)
@@ -194,7 +195,7 @@ class RelatedPKField(ma.fields.Field):
             data = []
             for pk in value:
                 try:
-                    data.append(self.related_model._default_manager.get(pk=pk))
+                    data.append(self.queryset.get(pk=pk))
                 except ObjectDoesNotExist:
                     invalid_pks.append(pk)
 
@@ -209,7 +210,7 @@ class RelatedPKField(ma.fields.Field):
 
         if self.to_field:
             try:
-                return self.related_model._default_manager.get(pk=value)
+                return self.queryset.get(pk=value)
             except ObjectDoesNotExist:
                 raise self.make_error(
                     'related_object_does_not_exists',

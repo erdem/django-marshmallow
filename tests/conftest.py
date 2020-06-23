@@ -228,3 +228,20 @@ def all_related_obj(db, db_models):
     all_related_obj = db_models.AllRelatedFieldsModel.objects.get(pk=all_related_obj.pk)
     return all_related_obj
 
+
+@pytest.fixture
+def limited_related_choices_obj(db, db_models):
+    objs = db_models.ForeignKeyTarget.objects.bulk_create([
+        db_models.ForeignKeyTarget(name='Foreign Key 1', active=True),
+        db_models.ForeignKeyTarget(name='Foreign Key 2', active=True),
+        db_models.ForeignKeyTarget(name='Foreign Key 3', active=False),
+        db_models.ForeignKeyTarget(name='Foreign Key 4', active=False),
+        db_models.ForeignKeyTarget(name='Foreign Key 5', active=False)
+    ])
+    objs[0].save()
+    simple_obj = db_models.SimpleRelationsModel(
+        foreign_key_field=objs[0]
+    )
+    simple_obj.save()
+    return simple_obj
+

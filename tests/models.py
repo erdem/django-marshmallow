@@ -71,6 +71,7 @@ class DataFieldsModel(TestAbstractModel):
 
 class ForeignKeyTarget(TestAbstractModel):
     name = models.CharField(max_length=255)
+    active = models.BooleanField(default=True)
 
 
 class ManyToManyTarget(TestAbstractModel):
@@ -95,6 +96,7 @@ class SimpleRelationsModel(TestAbstractModel):
     foreign_key_field = models.ForeignKey(
         ForeignKeyTarget,
         on_delete=models.CASCADE,
+        limit_choices_to={'active': True},
     )
 
 

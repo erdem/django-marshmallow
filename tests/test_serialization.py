@@ -1,7 +1,5 @@
 from urllib.parse import urljoin
 
-import pytest
-from django.db import transaction
 from django.forms import model_to_dict
 
 from django_marshmallow import fields
@@ -239,3 +237,15 @@ def test_implicit_nested_fields_schema(db, db_models, all_related_obj):
     # `second_depth_relation_field` is a NestedSchema
     assert isinstance(data['many_to_many_field'][0]['second_depth_relation_field'], dict) is True
     assert data['many_to_many_field'][0]['second_depth_relation_field']['name'] == 'Second level relation'
+
+
+def test_related_field_with_limited_choices_serialization(db_models, limited_related_choices_obj):
+    class TestSchema(ModelSchema):
+
+        class Meta:
+            model = db_models.SimpleRelationsModel
+            fields = ('many_to_many_field', 'foreign_key_field')
+
+    schema = TestSchema()
+    data = schema.dump(limited_related_choices_obj)
+    assert len(data) == 2

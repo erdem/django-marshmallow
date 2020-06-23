@@ -283,3 +283,23 @@ def test_file_field_deserialization(db_models, uploaded_file_obj, uploaded_image
     assert data['name'] == name
     assert data['file_field'].name == uploaded_file_obj.name
     assert data['image_field'].name == uploaded_image_file_obj.name
+
+
+def test_related_field_with_limited_choices_deserialization(db_models, limited_related_choices_obj):
+    class TestSchema(ModelSchema):
+
+        class Meta:
+            model = db_models.SimpleRelationsModel
+            fields = ('foreign_key_field', )
+
+    # `foreign_key_field` choices limited for only `active=True` items
+    choice = db_models.ForeignKeyTarget.objects.filter(active=True).first()
+    schema = TestSchema()
+    load_data = {
+        'foreign_key_field': {
+            'pk': choice.id
+        }
+    }
+    data = schema.load(load_data)
+    assert len(data) == 1
+    assert data['foreign_key_field'] == choice
