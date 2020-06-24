@@ -252,5 +252,12 @@ class ModelFieldConverter:
             kwargs['choices'] = model_field.choices
 
         kwargs['validate'] = field_validators
-        kwargs['field_kwargs'] = kwargs
+        _django_form_field_kwargs = {
+            'required': kwargs.get('required'),
+            'label': kwargs.get('label'),
+            'help_text': kwargs.get('help_text'),
+            'validators': field_validators,
+        }
+        kwargs['_django_form_field_kwargs'] = _django_form_field_kwargs
+        kwargs['field_kwargs'] = kwargs.copy()
         return kwargs
