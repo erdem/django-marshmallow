@@ -278,7 +278,8 @@ class BaseModelSchema(Schema, metaclass=ModelSchemaMetaclass):
         handled_errors = {}
         for key, override_message in error_message_overrides.items():
             if isinstance(key, str):
-                handled_errors[key] = override_message
+                if self.fields.get(key):
+                    handled_errors[key] = override_message
                 continue
 
             if issubclass(key, Field) and isinstance(error.messages, dict):
