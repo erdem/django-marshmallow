@@ -13,8 +13,8 @@ from marshmallow import Schema, ValidationError
 
 from django_marshmallow.converter import ModelFieldConverter
 from django_marshmallow.fields import RelatedField, RelatedNested
-from django_marshmallow.settings import ma_settings
 from django_marshmallow.utils import construct_instance
+
 
 ALL_FIELDS = '__all__'
 
@@ -22,6 +22,8 @@ ALL_FIELDS = '__all__'
 class ModelSchemaOpts(SchemaOpts):
 
     def __init__(self, meta, ordered: bool = False):
+        from django_marshmallow.settings import ma_settings
+
         fields = getattr(meta, 'fields', None)
         self.model = getattr(meta, 'model', None)
 

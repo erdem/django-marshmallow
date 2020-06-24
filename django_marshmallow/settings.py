@@ -98,6 +98,6 @@ def reload_ma_settings(*args, **kwargs):
     global ma_settings
     setting, value = kwargs['setting'], kwargs['value']
     if setting == 'MARSHMALLOW_SETTINGS' and value:
-        ma_settings = DjangoMarshmallowSettings(None, DEFAULTS)
+        ma_settings = DjangoMarshmallowSettings(value, DEFAULTS)
 
-setting_changed.connect(ma_settings)
+setting_changed.connect(reload_ma_settings)
