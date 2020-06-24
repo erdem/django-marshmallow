@@ -36,7 +36,6 @@ class DjangoMarshmallowSettings:
             self._app_settings = app_settings
 
         self.defaults = defaults or DEFAULTS
-        self._cached_attrs = set()
 
     @property
     def app_settings(self):
@@ -86,7 +85,7 @@ class DjangoMarshmallowSettings:
                     raise ValueError(_(
                         f'Invalid {attr} settings value. Check the settings documentation: {self.SETTINGS_DOCUMENT_URL}'
                     ))
-        # Cache the result
+
         setattr(self, attr, val)
         return val
 
