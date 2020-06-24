@@ -118,7 +118,7 @@ def test_file_field_serialization(db_models, file_field_obj):
         class Meta:
             model = db_models.FileFieldModel
             fields = ('name', 'file_field', 'image_field')
-            domain_for_files_url = custom_files_domain
+            domain_for_file_urls = custom_files_domain
             use_file_url = True
 
     schema = TestSchema()

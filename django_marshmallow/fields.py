@@ -81,7 +81,7 @@ class FileField(DJMFieldMixin, ma.fields.Field):
             return None
 
         use_url = getattr(self, 'use_url', self.root.opts.use_file_url)
-        custom_domain = getattr(self, 'custom_domain', self.root.opts.domain_for_files_url)
+        custom_domain = getattr(self, 'custom_domain', self.root.opts.domain_for_file_urls)
         if use_url:
             try:
                 url = value.url
@@ -103,7 +103,8 @@ class ImageField(FileField):
     def _deserialize(self, value, attr, data, **kwargs):
         image_file = super()._deserialize(value, attr, data, **kwargs)
         field_kwargs = self.metadata.get('field_kwargs', {})
-        django_form_field = self.model_field.formfield(**field_kwargs)
+        django_form_field_kwargs = field_kwargs.get('_django_form_field_kwargs')
+        django_form_field = self.model_field.formfield(**django_form_field_kwargs)
         django_form_field.error_messages = self.error_messages
         return django_form_field.clean(image_file)
 

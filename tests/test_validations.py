@@ -419,7 +419,11 @@ def test_implicit_nested_fields_schema_validations(db, db_models):
     schema = TestM2MSchema()
     errors = schema.validate(validate_data)
     assert len(errors) == 1
-    assert errors['many_to_many_field'] == {0: {'second_depth_relation_field': {'name': ['Field may not be null.']}}}
+    assert errors['many_to_many_field'] == {0: {
+        'second_depth_relation_field': {
+            'name': ['Field may not be null.'],
+            'active': ['Missing data for required field.']}
+    }}
 
 
 def test_string_allow_blank_validation(db_models):

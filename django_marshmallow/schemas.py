@@ -9,11 +9,12 @@ from django.utils.functional import cached_property
 from marshmallow.fields import Field
 from marshmallow.schema import SchemaMeta, SchemaOpts
 
-from marshmallow import Schema, types, ValidationError
+from marshmallow import Schema, ValidationError
 
 from django_marshmallow.converter import ModelFieldConverter
 from django_marshmallow.fields import RelatedField, RelatedNested
-from django_marshmallow.utils import get_field_info, construct_instance
+from django_marshmallow.settings import ma_settings
+from django_marshmallow.utils import construct_instance
 
 ALL_FIELDS = '__all__'
 
@@ -36,21 +37,42 @@ class ModelSchemaOpts(SchemaOpts):
         if not isinstance(self.nested_fields, (list, tuple, dict)):
             raise ValueError('`nested_fields` option must be a list, tuple or dict.')
 
-        self.order_by = getattr(meta, 'order_by', ())
+        self.order_by = getattr(meta, 'order_by', ma_settings.ORDER_BY)
         if not isinstance(self.order_by, (list, tuple)):
             raise ValueError("`order_by` schema option must be a list or tuple.")
 
-        self.error_message_overrides = getattr(meta, 'error_message_overrides', None)
+        self.error_message_overrides = getattr(meta, 'error_message_overrides', ma_settings.ERROR_MESSAGE_OVERRIDES)
         if self.error_message_overrides is not None and not isinstance(self.error_message_overrides, dict):
             raise ValueError('`error_message_overrides` option must be a dict.')
 
+        if ma_settings.DATE_FORMAT:
+            self.dateformat = ma_settings.DATE_FORMAT
+
+        if ma_settings.DATETIME_FORMAT:
+            self.datetimeformat = ma_settings.DATETIME_FORMAT
+
+        if ma_settings.RENDER_MODULE:
+            self.render_module = ma_settings.RENDER_MODULE
+
+        if ma_settings.INDEX_ERRORS:
+            self.index_errors = ma_settings.INDEX_ERRORS
+
+        if ma_settings.LOAD_ONLY:
+            self.load_only = ma_settings.LOAD_ONLY
+
+        if ma_settings.DUMP_ONLY:
+            self.dump_only = ma_settings.DUMP_ONLY
+
+        if ma_settings.UNKNOWN_FIELDS_ACTION:
+            self.unknown = ma_settings.UNKNOWN_FIELDS_ACTION
+
         self.model_converter = getattr(meta, 'model_converter', ModelFieldConverter)
         self.depth = getattr(meta, 'depth', None)
-        self.ordered = getattr(meta, 'ordered', True)
-        self.expand_related_pk_fields = getattr(meta, 'expand_related_pk_fields', True)
-        self.show_select_options = getattr(meta, 'show_select_options', False)
-        self.use_file_url = getattr(meta, 'use_file_url', True)
-        self.domain_for_files_url = getattr(meta, 'domain_for_files_url', None)
+        self.ordered = getattr(meta, 'ordered', ma_settings.ORDERED)
+        self.expand_related_pk_fields = getattr(meta, 'expand_related_pk_fields', ma_settings.EXPAND_RELATED_PK_FIELDS)
+        self.show_select_options = getattr(meta, 'show_select_options', ma_settings.SHOW_SELECT_OPTIONS)
+        self.use_file_url = getattr(meta, 'use_file_url', ma_settings.USE_FILE_URL)
+        self.domain_for_file_urls = getattr(meta, 'domain_for_file_urls', ma_settings.DOMAIN_FOR_FILE_URLS)
 
 
 class ModelSchemaMetaclass(SchemaMeta):
