@@ -48,7 +48,7 @@ class DataFieldsModel(TestAbstractModel):
     email_field = models.EmailField(max_length=255)
     float_field = models.FloatField()
     integer_field = models.IntegerField(validators=[validate_even])
-    null_boolean_field = models.NullBooleanField()
+    null_boolean_field = models.BooleanField(null=True)
     positive_integer_field = models.PositiveIntegerField()
     positive_small_integer_field = models.PositiveSmallIntegerField()
     slug_field = models.SlugField()
@@ -162,6 +162,19 @@ DECIMAL_CHOICES = (
     ('medium', decimal.Decimal('0.5')),
     ('high', decimal.Decimal('0.9'))
 )
+
+
+class CustomChoicesField(models.CharField):
+
+    def __init__(self, *args, **kwargs):
+        kwargs['blank'] = False
+        kwargs['null'] = True
+        kwargs['choices'] = DECIMAL_CHOICES
+        super().__init__(*args, **kwargs)
+
+
+class CustomFieldModel(TestAbstractModel):
+    choices = CustomChoicesField(max_length=255)
 
 
 class ChoicesModel(TestAbstractModel):

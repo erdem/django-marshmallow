@@ -1,6 +1,57 @@
 from django_marshmallow import fields
 from django_marshmallow.schemas import ModelSchema
+from tests.models import DECIMAL_CHOICES
 
+
+def test_choices_field_deserialization(db, db_models):
+    class TestSchema(ModelSchema):
+        class Meta:
+            model = db_models.BasicChoiceFieldModel
+            fields = ('color',)
+
+    load_data = {
+        'color': 'red'
+    }
+
+    schema = TestSchema()
+    data = schema.load(load_data)
+    assert len(data) == 1
+    assert data['color'] == 'red'
+
+    # test same schema with `show_select_options`
+
+    class TestSchema(ModelSchema):
+        class Meta:
+            model = db_models.BasicChoiceFieldModel
+            fields = ('color',)
+            show_select_options = True
+
+    load_data = {
+        'color': 'red'
+    }
+
+    schema = TestSchema()
+    data = schema.load(load_data)
+    assert len(data) == 1
+    assert data['color'] == 'red'
+
+
+def test_custom_model_field_deserialization(db, db_models):
+    class TestSchema(ModelSchema):
+        class Meta:
+            model = db_models.CustomFieldModel
+            fields = ('choices',)
+
+    load_data = {
+        'choices': DECIMAL_CHOICES[1][0]
+    }
+    schema = TestSchema()
+    data = schema.load(load_data)
+    assert len(data) == 1
+    assert data['choices'] == DECIMAL_CHOICES[1][0]
+
+
+# related field tests
 
 def test_related_fields_deserialization(
         db,
@@ -228,40 +279,6 @@ def test_implicit_related_nested_fields_deserialization(db, db_models):
     assert isinstance(o2o_instance, db_models.OneToOneTarget) is True
     assert o2o_instance.uuid is not None
     assert o2o_instance._state.adding is True
-
-
-def test_choices_field_deserialization(db, db_models):
-    class TestSchema(ModelSchema):
-        class Meta:
-            model = db_models.BasicChoiceFieldModel
-            fields = ('color',)
-
-    load_data = {
-        'color': 'red'
-    }
-
-    schema = TestSchema()
-    data = schema.load(load_data)
-    assert len(data) == 1
-    assert data['color'] == 'red'
-
-    # test same schema with `show_select_options`
-
-    class TestSchema(ModelSchema):
-        class Meta:
-            model = db_models.BasicChoiceFieldModel
-            fields = ('color',)
-            show_select_options = True
-
-    load_data = {
-        'color': 'red'
-    }
-
-    schema = TestSchema()
-    data = schema.load(load_data)
-    assert len(data) == 1
-    assert data['color'] == 'red'
-
 
 def test_file_field_deserialization(db_models, uploaded_file_obj, uploaded_image_file_obj):
 

@@ -1,5 +1,6 @@
 from django_marshmallow import fields
 from django_marshmallow.schemas import ModelSchema
+from tests.models import DECIMAL_CHOICES
 
 
 def test_file_field_model_save(db, db_models, uploaded_file_obj, uploaded_image_file_obj):
@@ -133,3 +134,19 @@ def test_schema_with_related_pk_fields(db, db_models, fk_related_instance, m2m_r
     m2m_pk_list = list(instance.many_to_many_field.all().values_list('uuid', flat=True))
     assert m2m_related_instances[0].uuid in m2m_pk_list
     assert m2m_related_instances[1].uuid in m2m_pk_list
+
+
+def test_custom_model_field_deserialization(db, db_models):
+    class TestSchema(ModelSchema):
+        class Meta:
+            model = db_models.CustomFieldModel
+            fields = ('choices',)
+
+    save_data = {
+        'choices': DECIMAL_CHOICES[1][0]
+    }
+    schema = TestSchema()
+    errors = schema.validate(save_data)
+    assert len(errors) == 0
+    instance = schema.save(save_data)
+    assert instance.choices == DECIMAL_CHOICES[1][0]

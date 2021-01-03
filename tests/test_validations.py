@@ -561,3 +561,33 @@ def test_error_message_overrides_functionality(db_models):
     assert errors['text_field'] == 'All string fields will raise same error message.'
     assert errors['date_field'] == 'THIS NOT A VALID DATE'
     assert errors['email_field'] == ['Field may not be null.']
+
+
+def test_custom_model_field_validation(db, db_models):
+    class TestSchema(ModelSchema):
+        class Meta:
+            model = db_models.CustomFieldModel
+            fields = ('choices',)
+
+    schema = TestSchema()
+    validate_data = {
+        'choices': ''
+    }
+    errors = schema.validate(validate_data)
+    assert len(errors) == 1
+    assert errors['choices'] == ['This field is required.']
+
+    # test with invalid option
+    validate_data = {
+        'choices': 'INVALID_CHOICE'
+    }
+    errors = schema.validate(validate_data)
+    assert len(errors) == 1
+    assert errors['choices'] == ['Select a valid choice. INVALID_CHOICE is not one of the available choices.']
+
+    # field can be `None`
+    validate_data = {
+        'choices': None
+    }
+    errors = schema.validate(validate_data)
+    assert len(errors) == 0

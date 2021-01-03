@@ -7,6 +7,7 @@ from django.db import models
 
 import marshmallow as ma
 from marshmallow import ValidationError, validate
+from django.forms import ValidationError as DjangoFormValidationError
 from django.core.exceptions import ValidationError as DjangoValidationError
 from marshmallow.validate import Validator
 
@@ -65,10 +66,10 @@ class FileField(DJMFieldMixin, ma.fields.Field):
             file_name = value.name
             file_size = value.size
         except AttributeError:
-            self.make_error('invalid')
+            self.fail('invalid')
 
         if not file_name:
-            self.make_error('no_name')
+            self.fail('no_name')
         if not self.allow_empty_file and not file_size:
             self.fail('empty')
         if self.max_length and len(file_name) > self.max_length:
@@ -141,7 +142,33 @@ class ChoiceField(String):
         return serialized_data
 
 
-### Related fields
+class GenericField(DJMFieldMixin, ma.fields.Field):
+    """
+        The schema field class for custom django model field data serialization and deserialization.
+        It uses django form field to handle field validations.
+    """
+
+    def __init__(self, formfield_class=None, **kwargs):
+        super().__init__(**kwargs)
+        field_kwargs = self.metadata.get('field_kwargs', {})
+        django_form_field_kwargs = field_kwargs.get('_django_form_field_kwargs')
+        if formfield_class is None:
+            formfield_class = self.model_field.formfield
+        self.formfield = formfield_class(**django_form_field_kwargs)
+        self.error_messages.update(self.formfield.error_messages or {})
+
+    def _deserialize(self, value, attr, data, **kwargs):
+        data = super()._deserialize(value, attr, data, **kwargs)
+        try:
+            return self.formfield.clean(data)
+        except DjangoValidationError as error:
+            raise ValidationError(error.messages[0])
+
+    def _serialize(self, value, attr, obj, **kwargs):
+        data = super()._deserialize(value, attr, obj, **kwargs)
+        return self.formfield.to_python(data)
+
+
 class RelatedPKField(ma.fields.Field):
 
     default_error_messages = {

@@ -32,7 +32,6 @@ class ModelFieldConverter:
         models.IPAddressField: fields.IPAddressField,
         models.ImageField: fields.ImageField,
         models.IntegerField: fields.Integer,
-        models.NullBooleanField: fields.Boolean,
         models.PositiveIntegerField: fields.Integer,
         models.PositiveSmallIntegerField: fields.Integer,
         models.SlugField: fields.String,
@@ -108,7 +107,7 @@ class ModelFieldConverter:
             if self.is_standard_field(model_field):
                 model_schema_field = self.build_standard_field(field_name, model_field)
             else:
-                model_schema_field = self.build_inferred_field(field_name, model_field)
+                model_schema_field = self.build_generic_field(field_name, model_field)
             field_list.append(model_schema_field)
 
         return self.dict_cls(field_list)
@@ -128,12 +127,15 @@ class ModelFieldConverter:
         field_kwargs = self.get_schema_field_kwargs(model_field)
         return field_name, field_class(**field_kwargs)
 
-    def build_inferred_field(self, field_name, model_field):
+    def build_generic_field(self, field_name, model_field):
         """
         Return a `InferredField` for third party or custom model fields
         """
         field_kwargs = self.get_schema_field_kwargs(model_field)
-        return field_name, fields.InferredField(**field_kwargs)
+        field_class = fields.InferredField
+        if hasattr(model_field, 'formfield'):
+            field_class = fields.GenericField
+        return field_name, field_class(**field_kwargs)
 
     def build_related_nested_field(self, field_name, model_field_info):
         relation_info = model_field_info.relations.get(field_name)
@@ -239,7 +241,7 @@ class ModelFieldConverter:
         if model_field.blank and (isinstance(model_field, (models.CharField, models.TextField))):
             kwargs['allow_blank'] = True
 
-        if model_field.null and not isinstance(model_field, models.NullBooleanField):
+        if model_field.null:
             kwargs['allow_none'] = True
 
         if model_field.verbose_name:
@@ -258,6 +260,9 @@ class ModelFieldConverter:
             'help_text': kwargs.get('help_text'),
             'validators': field_validators,
         }
-        kwargs['_django_form_field_kwargs'] = _django_form_field_kwargs
-        kwargs['field_kwargs'] = kwargs.copy()
+        field_kwargs = kwargs.copy()
+        field_kwargs['_django_form_field_kwargs'] = _django_form_field_kwargs
+        kwargs['metadata'] = {
+            'field_kwargs': field_kwargs
+        }
         return kwargs

@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from django.conf import settings as django_settings
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext as _
 from django.test.signals import setting_changed
 from marshmallow import RAISE
 
@@ -98,5 +98,6 @@ def reload_ma_settings(*args, **kwargs):
     setting, value = kwargs['setting'], kwargs['value']
     if setting == 'MARSHMALLOW_SETTINGS' and value:
         ma_settings = DjangoMarshmallowSettings(value, DEFAULTS)
+
 
 setting_changed.connect(reload_ma_settings)

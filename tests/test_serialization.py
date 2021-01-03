@@ -4,6 +4,7 @@ from django.forms import model_to_dict
 
 from django_marshmallow import fields
 from django_marshmallow.schemas import ModelSchema
+from tests.models import DECIMAL_CHOICES
 
 
 def test_schema_serialization_with_all_fields_option(db_models, data_model_obj):
@@ -249,3 +250,19 @@ def test_related_field_with_limited_choices_serialization(db_models, limited_rel
     schema = TestSchema()
     data = schema.dump(limited_related_choices_obj)
     assert len(data) == 2
+
+
+def test_custom_model_field_serialization(db, db_models):
+    class TestSchema(ModelSchema):
+        class Meta:
+            model = db_models.CustomFieldModel
+            fields = ('choices',)
+
+    model_obj = db_models.CustomFieldModel(
+        choices=DECIMAL_CHOICES[1][0]
+    )
+    model_obj.save()
+    schema = TestSchema()
+    data = schema.dump(model_obj)
+    assert len(data) == 1
+    assert data['choices'] == DECIMAL_CHOICES[1][0]
