@@ -33,7 +33,8 @@ def pytest_configure(config):
         INSTALLED_APPS=(
             'django_marshmallow',
             'tests'
-        )
+        ),
+        DEFAULT_AUTO_FIELD='django.db.models.AutoField'
     )
     django.setup()
 

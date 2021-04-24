@@ -266,3 +266,23 @@ def test_custom_model_field_serialization(db, db_models):
     data = schema.dump(model_obj)
     assert len(data) == 1
     assert data['choices'] == DECIMAL_CHOICES[1][0]
+
+
+def test_unknown_model_field_serialization(db, db_models):
+    class TestSchema(ModelSchema):
+
+        class Meta:
+            model = db_models.JSONFieldModel
+            fields = ('name', 'data')
+
+    json_data = {
+        'schema_field_type': 'unknown'
+    }
+    model_obj = db_models.JSONFieldModel(
+        name='store-json',
+        data=json_data
+    )
+    model_obj.save()
+    schema = TestSchema()
+    dump_data = schema.dump(model_obj)
+    assert dump_data['data'] == json_data

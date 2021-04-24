@@ -7,7 +7,6 @@ from django.db import models
 
 import marshmallow as ma
 from marshmallow import ValidationError, validate
-from django.forms import ValidationError as DjangoFormValidationError
 from django.core.exceptions import ValidationError as DjangoValidationError
 from marshmallow.validate import Validator
 

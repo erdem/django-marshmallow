@@ -122,6 +122,11 @@ class AllRelatedFieldsModel(TestAbstractModel):
     )
 
 
+class JSONFieldModel(TestAbstractModel):
+    name = models.CharField(max_length=255)
+    data = models.JSONField()
+
+
 class BasicChoiceFieldModel(TestAbstractModel):
     COLOR_CHOICES = (
         ('red', 'Red'),

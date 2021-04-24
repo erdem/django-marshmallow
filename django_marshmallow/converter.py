@@ -244,9 +244,6 @@ class ModelFieldConverter:
         if model_field.null:
             kwargs['allow_none'] = True
 
-        if model_field.verbose_name:
-            kwargs['label'] = capfirst(model_field.verbose_name)
-
         if model_field.help_text:
             kwargs['help_text'] = model_field.help_text
 
@@ -256,7 +253,6 @@ class ModelFieldConverter:
         kwargs['validate'] = field_validators
         _django_form_field_kwargs = {
             'required': kwargs.get('required'),
-            'label': kwargs.get('label'),
             'help_text': kwargs.get('help_text'),
             'validators': field_validators,
         }
@@ -265,4 +261,5 @@ class ModelFieldConverter:
         kwargs['metadata'] = {
             'field_kwargs': field_kwargs
         }
+
         return kwargs
